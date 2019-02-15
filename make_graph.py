@@ -17,13 +17,13 @@ gf = open(graphfile, 'w')
 matches = set()
 for vtx1, val in words.items():
     for vtx2, val2 in words.items():
-        if vtx1 == vtx2 or (vtx2, vtx) in matches:
+        if vtx1 == vtx2 or (vtx2, vtx1) in matches:
             continue
-        matches.add((vtx, vtx2))
+        matches.add((vtx1, vtx2))
         dist = euclidean_dist(val, val2)
         if dist > THRESHOLD:
             continue
-        gf.write(f'{key} {key2} {dist}\n')
+        gf.write(f'{vtx1} {vtx2} {dist}\n')
         #retarr.append((key, key2, dist))
 
 # retarr.sort(key=lambda x: x[2])
