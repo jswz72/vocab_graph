@@ -40,10 +40,10 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
         for (int i = 0; i < word_vecs.size(); i++) {
             for (int j = 0; j < word_vecs.size(); j++) {
 				// No edges to self
-                if (i != j) {
-					double dist = euclidean_dist(std::get<1>(word_vecs[i]), std::get<1>(word_vecs[j]));
+				if (i != j) { 
+					double dist = euclidean_dist(std::get<1>(word_vecs[i]), std::get<1>(word_vecs[j])); 
 					if (!threshold || threshold && dist < threshold) {
-						auto edge = std::make_tuple(std::get<0>(word_vecs[i]), std::get<0>(word_vecs[j]), dist);
+					   	auto edge = std::make_tuple(std::get<0>(word_vecs[i]), std::get<0>(word_vecs[j]), dist); 
 						inner_edge_list.push_back(edge);
 					}
 				}
