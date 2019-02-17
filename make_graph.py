@@ -1,10 +1,11 @@
 import numpy as np
 import time
+import re
 
 vectorfile = 'glove.6B.50d.txt'
 graphfile = 'list.txt'
-LIMIT = 10000
-THRESHOLD = 3
+LIMIT = 5000
+THRESHOLD = 0.9
 
 
 def euclidean_dist(x, y):
@@ -12,6 +13,10 @@ def euclidean_dist(x, y):
 
 def collect_vectors(f):
     mat = [line.split(' ') for line in f.readlines()[:LIMIT]]
+    print(f'Original num words: {len(mat)}')
+    only_alpha = re.compile('[^a-zA-Z]')
+    mat = [line for line in mat if only_alpha.sub('', line[0])]
+    print(f'After filtering: {len(mat)}')
     return { row[0]: tuple([float(num) for num in row[1:]]) for row in mat }
 
 def parse_vector_file(filename):
@@ -31,21 +36,22 @@ def find_edges(words, add_func, threshold=None):
             add_func((vtx1, vtx2, dist))
 
 
-def write_edge_list(words, outfile):
+def write_edge_list(words, outfile, threshold=None):
     '''write edgelist to file at given path'''
     of = open(outfile, 'w')
     def add_func(edge_tuple):
         vtx1, vtx2, dist = edge_tuple
         of.write(f'{vtx1} {vtx2} {dist}')
-    find_edges(words, add_func)
+    find_edges(words, add_func, threshold)
     of.close()
 
-def create_edge_list(words):
+def create_edge_list(words, threshold=None):
     '''create and return edgelist in memory'''
     returnarr = []
     def add_func(edge_tuple):
         returnarr.append(edge_tuple)
-    find_edges(words, add_func)
+    find_edges(words, add_func, threshold)
+    print(len(returnarr))
     return returnarr
 
     
@@ -63,8 +69,7 @@ start = time.time()
 words = parse_vector_file(vectorfile)
 parse_time = time.time()
 print(f'Time to parse vectorfile: {parse_time - start}')
-# edges = create_edge_list(words)
-write_edge_list(words, graphfile)
+edges = create_edge_list(words, THRESHOLD)
 edge_time = time.time()
 print(f'Time to create edges: {edge_time - parse_time}')
-#sort_and_print_edges(edges)
+sort_and_print_edges(edges)
