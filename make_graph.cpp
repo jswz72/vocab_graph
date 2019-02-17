@@ -8,41 +8,10 @@
 #include <tuple>
 #include <cmath>
 #include <unordered_map>
+#include <omp.h>
 
 using std::cout;
 using std::endl;
-
-std::unordered_map<std::string, std::vector<double> > parse_word_vectors(const char *vecfilename, int limit) {
-    std::ifstream infile(vecfilename);
-    std::string line;
-
-    std::unordered_map<std::string, std::vector<double> > words;
-    int counter = 0;
-    while (std::getline(infile, line)) {
-        if (limit && ++counter > limit) {
-            break;
-        }
-        std::istringstream iss(line);
-        std::string word;
-        iss >> word;
-        bool alphanum = true;
-        for (std::string::iterator it=word.begin(); it != word.end(); it++) {
-            if (!isalpha(*it)) {
-                alphanum = false;
-                break;
-            }
-        }
-        if (!alphanum)
-            continue;
-        double d;
-        std::vector<double> vec;
-        while ((iss >> d)) {
-            vec.push_back(d);
-        }
-        words[word] = vec;
-    }
-    return words;
-}
 
 double euclidean_dist(std::vector<double> x, std::vector<double> y) {
     double sum = 0;
@@ -52,6 +21,84 @@ double euclidean_dist(std::vector<double> x, std::vector<double> y) {
     }
     return sqrt(sum);
 }
+
+std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
+		std::vector<std::tuple<std::string, std::vector<double > > > word_vecs, int threshold) {
+
+	std::vector<std::tuple<std::string, std::string, double> > edge_list;
+	size_t *prefix;
+    #pragma omp parallel
+    {
+        int threadcount = omp_get_num_threads();
+        int thread_idx = omp_get_thread_num();
+        #pragma omp single
+        {
+			prefix = new size_t[threadcount + 1];
+        }
+        std::vector<std::tuple<std::string, std::string, double> > inner_edge_list;
+        #pragma omp for schedule(static) nowait
+        for (int i = 0; i < word_vecs.size(); i++) {
+            for (int j = 0; j < word_vecs.size(); j++) {
+				// No edges to self
+                if (i != j) {
+					double dist = euclidean_dist(std::get<1>(word_vecs[i]), std::get<1>(word_vecs[j]));
+					if (!threshold || threshold && dist < threshold) {
+						auto edge = std::make_tuple(std::get<0>(word_vecs[i]), std::get<0>(word_vecs[j]), dist);
+						inner_edge_list.push_back(edge);
+					}
+				}
+            }
+        }
+        prefix[thread_idx + 1] = inner_edge_list.size();
+        #pragma omp barrier
+        #pragma omp single
+        {
+            for(int i = 1; i <= threadcount; i++) {
+                prefix[i] += prefix[i - 1];
+            }
+            edge_list.resize(edge_list.size() + prefix[threadcount]);
+        }
+        std::copy(inner_edge_list.begin(), inner_edge_list.end(), edge_list.begin() + prefix[thread_idx]);
+    }
+    delete[] prefix;
+	return edge_list;
+};
+
+std::vector<std::tuple<std::string, std::vector<double> > > parse_word_vectors(
+		const char *vecfilename, 
+		int limit) {
+    std::ifstream infile(vecfilename);
+    std::string line;
+
+	std::vector<std::tuple<std::string, std::vector<double > > > words;
+    int counter = 0;
+    while (std::getline(infile, line)) {
+        if (limit && ++counter > limit) {
+            break;
+        }
+        std::istringstream iss(line);
+        std::string word;
+        iss >> word;
+        bool alphanum = true;
+        for (auto const& ch: word) {
+            if (!isalpha(ch)) {
+                alphanum = false;
+                break;
+            }
+        }
+        if (!alphanum)
+            continue;
+        double d;
+        std::vector<double> vec;
+        while ((iss >> d))
+            vec.push_back(d);
+		auto tup = std::make_tuple(word, vec);
+		words.push_back(tup);
+    }
+    return words;
+}
+
+
 
 
 int main(int argc, char *argv[]) {
@@ -63,46 +110,15 @@ int main(int argc, char *argv[]) {
     const int threshold = argc > 2 ? atoi(argv[2]) : 0;
     const int limit = argc > 3 ? atoi(argv[3]) : 0;
 
-    std::unordered_map<std::string, std::vector<double> > words = parse_word_vectors(vecfilename, limit);
+    auto words = parse_word_vectors(vecfilename, limit);
 
-    std::vector<std::tuple<std::string, std::string, double> > edge_list;
-    size_t *prefix;
-    #pragma omp parallel
-    {
-        int threadcount = omp_get_num_threads();
-        int thread_idx = omp_get_thread_num();
-        #pragma omp single
-        {
-            prefix = new size_t[nthreads+1];
-            prefix[0] = 0;
-        }
-        std::vector<std::tuple<std::string, std::string, double> > inner_edge_list;
-        #pragma omp for
-        for (auto const& vtx1_pair: words) {
-            for (auto const& vtx2_pair: words) {
-                if (vtx1_pair.first == vtx2_pair.first)
-                    continue
-                double dist = euclidean_dist(vt1_pair.second, vtx2_pair.second);
-                if (dist < threshold)
-                    std::tuple<std::string, std::string, double> edge(vtx1_pair.first, vtx2_pair.first, dist);
-                    inner_edge_list.push_back(edge);
-            }
-        }
-        prefix[thread_idx + 1] = inner_edge_list.size();
-        #pragma omp barrier
-        #pragma omp single
-        {
-            for(int i = 0; i <= threadcount; i++) {
-                prefix[i] += prefix[i - 1];
-            }
-            edge_list.resize(inner_edge_list.begin(), inner_edge_list.end(), edge_list.begin() + prefix[thread_idx]);
-        }
-        std::copy(inner_edge_list.begin(), inner_edge_list.end(), edge_list.begin() + prefix[thread_idx]);
-    }
-    delete[] prefix;
+	auto edge_list = create_edge_list(words, threshold);
+	cout << "Edges: " << edge_list.size() << endl;
 
-    std::vector<double> digs = words["the"];
-    for (int i = 0; i < digs.size(); i++) {
-        cout << digs[i] << ", ";
-    }
+	/*
+	for (auto& edge: edge_list) {
+		cout << std::get<0>(edge) << " " 
+			<< std::get<1>(edge) << " " << std::get<2>(edge) << endl;
+	}
+	*/
 }
