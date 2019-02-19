@@ -23,7 +23,7 @@ double euclidean_dist(std::vector<double> x, std::vector<double> y) {
 }
 
 std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
-		std::vector<std::tuple<std::string, std::vector<double > > > word_vecs, int threshold) {
+		std::vector<std::tuple<std::string, std::vector<double > > > word_vecs, double threshold) {
 
 	std::vector<std::tuple<std::string, std::string, double> > edge_list;
 	size_t *prefix;
@@ -34,6 +34,7 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
         #pragma omp single
         {
 			prefix = new size_t[threadcount + 1];
+			cout << "Using " << threadcount << " threads" << endl;
         }
         std::vector<std::tuple<std::string, std::string, double> > inner_edge_list;
         #pragma omp for schedule(static) nowait
@@ -107,7 +108,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     const char *vecfilename = argv[1];
-    const int threshold = argc > 2 ? atoi(argv[2]) : 0;
+    const double threshold = argc > 2 ? atof(argv[2]) : 0;
     const int limit = argc > 3 ? atoi(argv[3]) : 0;
 
     auto words = parse_word_vectors(vecfilename, limit);
