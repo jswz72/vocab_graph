@@ -8,6 +8,7 @@
 #include <tuple>
 #include <cmath>
 #include <unordered_map>
+#include <unordered_set>
 #include <omp.h>
 
 using std::cout;
@@ -26,6 +27,7 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
 		std::vector<std::tuple<std::string, std::vector<double > > > word_vecs, double threshold) {
 
 	std::vector<std::tuple<std::string, std::string, double> > edge_list;
+	cout << "Word vec size: " << word_vecs.size() << endl;
 	size_t *prefix;
     #pragma omp parallel
     {
@@ -37,7 +39,7 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
 			cout << "Using " << threadcount << " threads" << endl;
         }
         std::vector<std::tuple<std::string, std::string, double> > inner_edge_list;
-        #pragma omp for schedule(static) nowait
+        #pragma omp for schedule(static)
         for (int i = 0; i < word_vecs.size(); i++) {
             for (int j = 0; j < word_vecs.size(); j++) {
 		    // No edges to self
@@ -114,12 +116,20 @@ int main(int argc, char *argv[]) {
     auto words = parse_word_vectors(vecfilename, limit);
 
 	auto edge_list = create_edge_list(words, threshold);
-	cout << "Edges: " << edge_list.size() << endl;
+	std::vector<std::tuple<std::string, std::string, double> > trimmed_edge_list;
+	std::unordered_set<std::string> vtx_pairs;
+	for (auto &edge: edge_list) {
+		std::string vtx1 = std::get<0>(edge);
+		std::string vtx2 = std::get<1>(edge);
+		if (vtx_pairs.find(vtx2 + "," + vtx1) == vtx_pairs.end()){
+			trimmed_edge_list.push_back(edge);
+			vtx_pairs.emplace(vtx1 + "," + vtx2);
+		}
+	}
 
-	/*
-	for (auto& edge: edge_list) {
+	for (auto& edge: trimmed_edge_list) {
 		cout << std::get<0>(edge) << " " 
 			<< std::get<1>(edge) << " " << std::get<2>(edge) << endl;
 	}
-	*/
+	cout << "Num edges: " << trimmed_edge_list.size() << endl;
 }
