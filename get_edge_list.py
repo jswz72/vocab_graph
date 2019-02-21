@@ -2,11 +2,12 @@ import numpy as np
 import time
 import re
 import sys
+import csv
 
-vectorfile = 'word-vectors.txt'
-graphfile = 'list.txt'
+vectorfile = threshold = len(sys.argv) > 1 and sys.argv[1] or 'word-vectors.txt'
+threshold = len(sys.argv) > 2 and int(sys.argv[2]) or None
+outfile = len(sys.argv) > 3 and sys.argv[3] or None
 LIMIT = 5000
-threshold = len(sys.argv) > 1 and int(sys.argv[1]) or None
 
 
 def euclidean_dist(x, y):
@@ -42,9 +43,9 @@ def find_edges(words, add_func, threshold=None):
 def write_edge_list(words, outfile, threshold=None):
     '''write edgelist to file at given path'''
     of = open(outfile, 'w')
+    writer = csv.writer(of)
     def add_func(edge_tuple):
-        vtx1, vtx2, dist = edge_tuple
-        of.write(f'{vtx1} {vtx2} {dist}')
+        writer.writerow(list(edge_tuple))
     find_edges(words, add_func, threshold)
     of.close()
 
@@ -58,21 +59,41 @@ def create_edge_list(words, threshold=None):
     return returnarr
 
     
-def sort_and_print_edges(edges):
-    edges.sort(key=lambda x: x[2])
+def print_edges(edges, all=False):
+    if all:
+        for els in edges:
+            print(els)
+        return
+
     print('Most related:')
-    for els in edges:
+    for els in edges[:10]:
         print(els)
 
-    #print('\nLeast related')
-    #for els in edges[-10:]:
-    #    print(els)
+    print('\nLeast related')
+    for els in edges[-10:]:
+        print(els)
 
 start = time.time()
 words = parse_vector_file(vectorfile)
+print(f'Word vec size: {len(words)}')
 parse_time = time.time()
 print(f'Time to parse vectorfile: {parse_time - start}')
+
+if outfile:
+    edges = write_edge_list(words, outfile, threshold)
+    edge_time = time.time()
+    print(f'Time to create/write edge list: {edge_time - parse_time}')
+
 edges = create_edge_list(words, threshold)
 edge_time = time.time()
 print(f'Time to create edges: {edge_time - parse_time}')
-sort_and_print_edges(edges)
+edges.sort(key=lambda x: x[2])
+print_edges(edges, all=True)
+print(f'Num edges: {len(edges)}')
+filename, ext = outfile.split('.')
+with open(f'{filename}_sorted.{ext}', 'w') as of:
+    writer = csv.writer(of)
+    for edge in edges:
+        writer.writerow(list(edge))
+    of.close()
+
