@@ -1,11 +1,12 @@
 import numpy as np
 import time
 import re
+import sys
 
-vectorfile = 'glove.6B.50d.txt'
+vectorfile = 'word-vectors.txt'
 graphfile = 'list.txt'
 LIMIT = 5000
-THRESHOLD = 0.9
+threshold = len(sys.argv) > 1 and int(sys.argv[1]) or None
 
 
 def euclidean_dist(x, y):
@@ -26,14 +27,16 @@ def parse_vector_file(filename):
     return words
 
 def find_edges(words, add_func, threshold=None):
+    pairs = set()
     for vtx1, vec1 in words.items():
         for vtx2, vec2 in words.items():
-            if vtx1 == vtx2:
+            if vtx1 == vtx2 or (vtx2, vtx1) in pairs:
                 continue
             dist = euclidean_dist(vec1, vec2)
             if threshold and dist > threshold:
                 continue
             add_func((vtx1, vtx2, dist))
+            pairs.add((vtx1, vtx2))
 
 
 def write_edge_list(words, outfile, threshold=None):
@@ -58,18 +61,18 @@ def create_edge_list(words, threshold=None):
 def sort_and_print_edges(edges):
     edges.sort(key=lambda x: x[2])
     print('Most related:')
-    for els in edges[:10]:
+    for els in edges:
         print(els)
 
-    print('\nLeast related')
-    for els in edges[-10:]:
-        print(els)
+    #print('\nLeast related')
+    #for els in edges[-10:]:
+    #    print(els)
 
 start = time.time()
 words = parse_vector_file(vectorfile)
 parse_time = time.time()
 print(f'Time to parse vectorfile: {parse_time - start}')
-edges = create_edge_list(words, THRESHOLD)
+edges = create_edge_list(words, threshold)
 edge_time = time.time()
 print(f'Time to create edges: {edge_time - parse_time}')
 sort_and_print_edges(edges)
