@@ -14,7 +14,7 @@
 using std::cout;
 using std::endl;
 
-double euclidean_dist(std::vector<double> x, std::vector<double> y) {
+double euclidean_dist(std::vector<double> const &x, std::vector<double> cont &y) {
     double sum = 0;
     for (int i = 0; i < x.size(); i++) {
         double diff = x[i] - y[i];
@@ -24,44 +24,48 @@ double euclidean_dist(std::vector<double> x, std::vector<double> y) {
 }
 
 std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
-		std::vector<std::tuple<std::string, std::vector<double > > > word_vecs, double threshold) {
+		std::vector<std::tuple<std::string, std::vector<double > > > const &word_vecs, double threshold) {
 
 	std::vector<std::tuple<std::string, std::string, double> > edge_list;
 	cout << "Word vec size: " << word_vecs.size() << endl;
-	size_t *prefix;
+ 
+    // Sizes of thread's work
+	size_t *threadwork;
     #pragma omp parallel
     {
         int threadcount = omp_get_num_threads();
         int thread_idx = omp_get_thread_num();
         #pragma omp single
         {
-			prefix = new size_t[threadcount + 1];
+			threadwork = new size_t[threadcount];
 			cout << "Using " << threadcount << " threads" << endl;
         }
         std::vector<std::tuple<std::string, std::string, double> > inner_edge_list;
-        #pragma omp for schedule(static)
+
+        #pragma omp for schedule(static) nowait
         for (int i = 0; i < word_vecs.size(); i++) {
             for (int j = 0; j < word_vecs.size(); j++) {
-		    // No edges to self
-		    if (i != j) { 
-			    double dist = euclidean_dist(std::get<1>(word_vecs[i]), std::get<1>(word_vecs[j])); 
-			    if (!threshold || threshold && dist < threshold) {
-				    auto edge = std::make_tuple(std::get<0>(word_vecs[i]), std::get<0>(word_vecs[j]), dist); 
-				    inner_edge_list.push_back(edge);
-			    }
-		    }
+                // No edges to self
+                if (i != j) { 
+                    double dist = euclidean_dist(std::get<1>(word_vecs[i]), std::get<1>(word_vecs[j])); 
+                    if (!threshold || threshold && dist < threshold) {
+                        auto edge = std::make_tuple(std::get<0>(word_vecs[i]), std::get<0>(word_vecs[j]), dist); 
+                        inner_edge_list.push_back(edge);
+                    }
+                }
             }
         }
-        prefix[thread_idx + 1] = inner_edge_list.size();
+        threadwork[thread_idx] = inner_edge_list.size();
         #pragma omp barrier
         #pragma omp single
         {
-            for(int i = 1; i <= threadcount; i++) {
-                prefix[i] += prefix[i - 1];
+            int sum_work = 0;
+            for(int i = 0; i < threadcount; i++) {
+                sum_work += threadwork[i];
             }
-            edge_list.resize(edge_list.size() + prefix[threadcount]);
+            edge_list.resize(edge_list.size() + sum_work);
         }
-        std::copy(inner_edge_list.begin(), inner_edge_list.end(), edge_list.begin() + prefix[thread_idx]);
+        std::copy(inner_edge_list.begin(), inner_edge_list.end(), edge_list.begin() + threadcount[thread_idx]);
     }
     delete[] prefix;
 	return edge_list;
@@ -101,9 +105,6 @@ std::vector<std::tuple<std::string, std::vector<double> > > parse_word_vectors(
     return words;
 }
 
-
-
-
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         cout << "Provide vecfile" << endl;
@@ -116,20 +117,11 @@ int main(int argc, char *argv[]) {
     auto words = parse_word_vectors(vecfilename, limit);
 
 	auto edge_list = create_edge_list(words, threshold);
-	std::vector<std::tuple<std::string, std::string, double> > trimmed_edge_list;
-	std::unordered_set<std::string> vtx_pairs;
-	for (auto &edge: edge_list) {
-		std::string vtx1 = std::get<0>(edge);
-		std::string vtx2 = std::get<1>(edge);
-		if (vtx_pairs.find(vtx2 + "," + vtx1) == vtx_pairs.end()){
-			trimmed_edge_list.push_back(edge);
-			vtx_pairs.emplace(vtx1 + "," + vtx2);
-		}
-	}
 
-	for (auto& edge: trimmed_edge_list) {
+	cout << "Num edges (including bi-directional):" << edge_list.size() << endl;
+
+	for (auto& edge: edge_list) {
 		cout << std::get<0>(edge) << " " 
 			<< std::get<1>(edge) << " " << std::get<2>(edge) << endl;
 	}
-	cout << "Num edges: " << trimmed_edge_list.size() << endl;
 }
