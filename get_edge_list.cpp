@@ -14,7 +14,7 @@
 using std::cout;
 using std::endl;
 
-double euclidean_dist(std::vector<double> const &x, std::vector<double> cont &y) {
+double euclidean_dist(std::vector<double> const &x, std::vector<double> const &y) {
     double sum = 0;
     for (int i = 0; i < x.size(); i++) {
         double diff = x[i] - y[i];
@@ -116,12 +116,14 @@ int main(int argc, char *argv[]) {
 
     auto words = parse_word_vectors(vecfilename, limit);
 
-	auto edge_list = create_edge_list(words, threshold);
+    double start_time = omp_get_wtime();
+    auto edge_list = create_edge_list(words, threshold);
+    double endtime = omp_get_wtime() - start_time;
+    for (auto& edge: edge_list) {
+	cout << std::get<0>(edge) << " " 
+		<< std::get<1>(edge) << " " << std::get<2>(edge) << endl;
+    }
+    cout << "Num edges: " << edge_list.size() << endl;
+    cout << "Time: " << endtime << endl;
 
-	cout << "Num edges (including bi-directional):" << edge_list.size() << endl;
-
-	for (auto& edge: edge_list) {
-		cout << std::get<0>(edge) << " " 
-			<< std::get<1>(edge) << " " << std::get<2>(edge) << endl;
-	}
 }
