@@ -29,7 +29,6 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
 	std::vector<std::tuple<std::string, std::string, double> > edge_list;
 	cout << "Word vec size: " << word_vecs.size() << endl;
  
-    // Sizes of thread's work
 	size_t *threadwork;
     #pragma omp parallel
     {
@@ -37,7 +36,7 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
         int thread_idx = omp_get_thread_num();
         #pragma omp single
         {
-			threadwork = new size_t[threadcount];
+			threadwork = new size_t[threadcount + 1];
 			cout << "Using " << threadcount << " threads" << endl;
         }
         std::vector<std::tuple<std::string, std::string, double> > inner_edge_list;
@@ -55,19 +54,19 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
                 }
             }
         }
-        threadwork[thread_idx] = inner_edge_list.size();
+        threadwork[thread_idx + 1] = inner_edge_list.size();
         #pragma omp barrier
         #pragma omp single
         {
             int sum_work = 0;
-            for(int i = 0; i < threadcount; i++) {
-                sum_work += threadwork[i];
+            for(int i = 1; i <= threadcount; i++) {
+		threadwork[i] += threadwork[i - 1];
             }
-            edge_list.resize(edge_list.size() + sum_work);
+            edge_list.resize(edge_list.size() + threadwork[threadcount]);
         }
-        std::copy(inner_edge_list.begin(), inner_edge_list.end(), edge_list.begin() + threadcount[thread_idx]);
+        std::copy(inner_edge_list.begin(), inner_edge_list.end(), edge_list.begin() + threadwork[thread_idx]);
     }
-    delete[] prefix;
+    delete[] threadwork;
 	return edge_list;
 };
 
@@ -78,6 +77,7 @@ std::vector<std::tuple<std::string, std::vector<double> > > parse_word_vectors(
     std::string line;
 
 	std::vector<std::tuple<std::string, std::vector<double > > > words;
+    //only read until limit lines
     int counter = 0;
     while (std::getline(infile, line)) {
         if (limit && ++counter > limit) {
@@ -86,6 +86,7 @@ std::vector<std::tuple<std::string, std::vector<double> > > parse_word_vectors(
         std::istringstream iss(line);
         std::string word;
         iss >> word;
+	// only take alphanumeric 
         bool alphanum = true;
         for (auto const& ch: word) {
             if (!isalpha(ch)) {
