@@ -1,5 +1,3 @@
-Word vec size: 317756
-Using 28 threads
 the of 2.18965
 the to 2.64984
 the and 2.80219
