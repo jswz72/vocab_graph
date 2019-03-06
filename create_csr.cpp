@@ -16,11 +16,57 @@ struct WordDist {
     WordDist(float dist, int id): dist(dist), word_id(id) {};
 };
 
-float get_collective_dist(float *dist, int col) {
-    return 1.0;
+// Inverse sum rule
+float get_collective_dist(float *dist, int rows, int cols, int col) {
+    float sum = 0;
+    for (int i = 0; i < n; i++)
+        sum += (1 / dist[i * cols + col]);
+    return sum;
 }
 
+long shortest_path_weights(CSR *csr, string source, long target)
+{
+    int verticies = csr.vert_count;
+    // distance from start to vertix (index of arr)
+    long distances[verticies];
+    // bitset true if included in path
+    unsigned int path[verticies];
+    for (long i = 0; i < verticies; i++)
+    {
+        distances[i] = INT_MAX;
+        path[i] = 0;
+    }
+    distances[g->beg_pos[0]] = 0;
+    for (long count = 0; count < verticies - 1; count++)
+    {
+        long cur = min_dist(distances, path, verticies);
+        cout << " cur: " << cur << endl;
+        path[cur] = true;
+
+        // Update distances
+        for (long i = g->beg_pos[cur]; i < g->beg_pos[cur+1]; i++)
+        {
+            long neighbor = g->csr[i];
+            cout << "neighbor: " << neighbor << endl;
+            if (!path[neighbor] && 
+                    distances[cur] != INT_MAX &&
+                     distances[cur] + g->weight[i] < distances[neighbor])
+            {
+                distances[neighbor] = distances[cur] + g->weight[i];
+            }
+        }
+        cout << " count: " << count << endl;
+        for (long i = 0; i < verticies; i++) {
+            cout << i << " tt " << distances[i] << endl;
+        }
+        cout << endl;
+    }
+    return distances[target];
+}
+
+// Single Shortest Path from Source - Source is given source word
 void SSSP(CSR &csr, string &source_word, float *dist, int row) {
+    int cols = csr.vertex_count;
 }
 
 std::vector<WordDist*> collective_closest(string *source_words, int n, CSR &csr) {
@@ -36,7 +82,7 @@ std::vector<WordDist*> collective_closest(string *source_words, int n, CSR &csr)
 
     // Get collective dist of vtx (col) to all source words (row)
     for (int i = 0; i < csr.vertex_count; i++)
-        word_dist.push_back(new WordDist(get_collective_dist(dist, i), i));
+        word_dist.push_back(new WordDist(get_collective_dist(dist, n, csr.vertex_count, i), i));
 
 
     // Sort in terms of collect closest
