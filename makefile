@@ -1,2 +1,2 @@
 default:
-	g++ --std=c++11 -fopenmp get_edge_list.cpp
+	g++ --std=c++11 -g -Wall -fopenmp create_csr.cpp CSR.cpp 
