@@ -4,74 +4,96 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <limits>
 #include "CSR.h"
 
 using std::cout;
 using std::endl;
 using std::string;
 
+const double DOUBLE_MAX = std::numeric_limits<double>::max();
+
 struct WordDist {
-    float dist;
+    double dist;
     int word_id;
-    WordDist(float dist, int id): dist(dist), word_id(id) {};
+    WordDist(double dist, int id): dist(dist), word_id(id) {};
 };
 
 // Inverse sum rule
-float get_collective_dist(float *dist, int rows, int cols, int col) {
-    float sum = 0;
-    for (int i = 0; i < n; i++)
+double get_collective_dist(double *dist, int rows, int cols, int col) {
+    double sum = 0;
+    for (int i = 0; i < rows; i++) {
         sum += (1 / dist[i * cols + col]);
+    }
     return sum;
 }
 
-long shortest_path_weights(CSR *csr, string source, long target)
+int min_dist(double distances[], unsigned int path[], int verticies)
 {
-    int verticies = csr.vert_count;
-    // distance from start to vertix (index of arr)
-    long distances[verticies];
+    double min = DOUBLE_MAX;
+    int min_idx;
+    for (int i = 0; i < verticies; i++)
+    {
+        if (!path[i] && distances[i] <= min)
+        {
+            min = distances[i];
+            min_idx = i;
+        }
+    }
+    return min_idx;
+}
+
+/**
+ * Find shortest weighted path using djikstra's algorithm
+ */
+double shortest_path_weights(CSR &csr, const char *source, int target)
+{
+    int verticies = csr.vertex_count;
+    // distance from start to vertex 
+    double distances[verticies];
     // bitset true if included in path
     unsigned int path[verticies];
-    for (long i = 0; i < verticies; i++)
+    for (int i = 0; i < verticies; i++)
     {
-        distances[i] = INT_MAX;
+        distances[i] = DOUBLE_MAX;
         path[i] = 0;
     }
-    distances[g->beg_pos[0]] = 0;
-    for (long count = 0; count < verticies - 1; count++)
+
+    int source_idx = csr.word_to_idx(source);
+    distances[source_idx] = 0;
+    for (int count = 0; count < verticies - 1; count++)
     {
-        long cur = min_dist(distances, path, verticies);
-        cout << " cur: " << cur << endl;
+        int cur = min_dist(distances, path, verticies);
         path[cur] = true;
 
         // Update distances
-        for (long i = g->beg_pos[cur]; i < g->beg_pos[cur+1]; i++)
+        for (int i = csr.beg_pos[cur]; i < csr.beg_pos[cur+1]; i++)
         {
-            long neighbor = g->csr[i];
-            cout << "neighbor: " << neighbor << endl;
+            int neighbor = csr.word_to_idx(csr.adj_list[i]);
             if (!path[neighbor] && 
-                    distances[cur] != INT_MAX &&
-                     distances[cur] + g->weight[i] < distances[neighbor])
+                    distances[cur] != DOUBLE_MAX &&
+                     distances[cur] + csr.weight_list[i] < distances[neighbor])
             {
-                distances[neighbor] = distances[cur] + g->weight[i];
+                distances[neighbor] = distances[cur] + csr.weight_list[i];
             }
         }
-        cout << " count: " << count << endl;
-        for (long i = 0; i < verticies; i++) {
-            cout << i << " tt " << distances[i] << endl;
-        }
-        cout << endl;
     }
     return distances[target];
 }
 
-// Single Shortest Path from Source - Source is given source word
-void SSSP(CSR &csr, string &source_word, float *dist, int row) {
+// Single Shortest Path from Source... Source is given source word
+void SSSP(CSR &csr, const char *source_word, double *dist, int row) {
+
     int cols = csr.vertex_count;
+    for (int i = 0; i < cols; i++) {
+        double tmp = shortest_path_weights(csr, source_word, i);
+        dist[row * cols + i]  = tmp;
+    }
 }
 
-std::vector<WordDist*> collective_closest(string *source_words, int n, CSR &csr) {
+std::vector<WordDist*> collective_closest(const char **source_words, int n, CSR &csr) {
     // Row for each source word, col for each vtx
-    float *dist = (float *)malloc(sizeof(float) * n * csr.vertex_count);
+    double *dist = (double *)malloc(sizeof(double) * n * csr.vertex_count);
 
     // All vtxs, sorted in terms of closest
     std::vector<WordDist*> word_dist;
@@ -81,8 +103,9 @@ std::vector<WordDist*> collective_closest(string *source_words, int n, CSR &csr)
         SSSP(csr, source_words[i], dist, i);
 
     // Get collective dist of vtx (col) to all source words (row)
-    for (int i = 0; i < csr.vertex_count; i++)
+    for (int i = 0; i < csr.vertex_count; i++) {
         word_dist.push_back(new WordDist(get_collective_dist(dist, n, csr.vertex_count, i), i));
+    }
 
 
     // Sort in terms of collect closest
@@ -106,21 +129,35 @@ int main(int argc, char *argv[]) {
     int num_source_words = argc - 2;
     const char **source_words = new const char*[num_source_words];
     for (int i = 0; i < num_source_words; i++) {
-        source_words[i] = argv[i + 3];
+        source_words[i] = argv[i + 2];
     }
 
 
-    CSR *csr = new CSR(edgefilename);
-    std::cout << "Num verticies " << csr->vertex_count << endl;
-    std::cout << "Num edges " << csr->edge_count << endl;
+    CSR csr(edgefilename);
+    std::cout << "Num verticies " << csr.vertex_count << endl;
+    std::cout << "Num edges " << csr.edge_count << endl;
 
     for (int i = 0; i < num_source_words; i++) {
-        cout << source_words[i] << endl;
+        if (!csr.word_in_graph(source_words[i])) {
+            cout << "Not found in graph: " << source_words[i] << endl;
+            return 1;
+        }
     }
 
+    cout << endl;
+
+    std::vector<WordDist*> closest_words = collective_closest(source_words, num_source_words, csr);
+    
+    cout << "Closest words:" << endl;
+    for (int i = 0; i < 10; i++) {
+        cout << csr.idx_to_word(closest_words[i]->word_id) << " (Dist: "
+            << closest_words[i]->dist << ")" << endl;
+    }
+
+
     /*int i = csr->word_to_idx("april");
-    long beg = csr->beg_pos[i];
-    long end = csr->beg_pos[i + 1];
+    int beg = csr->beg_pos[i];
+    int end = csr->beg_pos[i + 1];
     cout << csr->words[i] << " neighbor list" << endl;
     for (int j = beg; j < end; j++) {
         cout << csr->adj_list[j] << ", weight: " << csr->weight_list[j] << endl;

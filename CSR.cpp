@@ -37,6 +37,7 @@ void CSR::add_edges(std::ifstream &edgefile) {
             beg_pos[vtx_idx] = edge_idx;
             words[vtx_idx] = vtx1;
             word_idx[vtx1] = vtx_idx;
+            idx_words[vtx_idx] = vtx1;
             cur_vtx = vtx1;
             vtx_idx++;
         }
