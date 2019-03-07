@@ -12,6 +12,8 @@ using std::endl;
 using std::string;
 
 const double DOUBLE_MAX = std::numeric_limits<double>::max();
+const double DOUBLE_INF = std::numeric_limits<double>::infinity();
+double NO_RELATION;
 
 struct WordDist {
     double dist;
@@ -107,13 +109,23 @@ std::vector<WordDist*> collective_closest(const char **source_words, int n, CSR 
         word_dist.push_back(new WordDist(get_collective_dist(dist, n, csr.vertex_count, i), i));
     }
 
+    // Word has no relation to given set
+    double no_relation = (1 / DOUBLE_MAX) * n;
 
-    // Sort in terms of collect closest
-    sort(word_dist.begin(), word_dist.end(), [](WordDist *a, WordDist *b) -> bool
-    {
-        return a->dist > b->dist;
+    std::vector<WordDist*> related_words;
+
+    // Filter out all dists that are 0 or not related
+    std::copy_if(word_dist.begin(), word_dist.end(), 
+            std::back_inserter(related_words), [DOUBLE_INF, no_relation](WordDist *a) -> bool {
+                    return a->dist != DOUBLE_INF && a->dist != no_relation;
     });
-    return word_dist;
+    
+    // Sort in terms of collect closest
+    sort(related_words.begin(), related_words.end(), [](WordDist *a, WordDist *b) -> bool
+    {
+        return a->dist < b->dist;
+    });
+    return related_words;
 }
 
 int main(int argc, char *argv[]) {
@@ -143,24 +155,19 @@ int main(int argc, char *argv[]) {
             return 1;
         }
     }
-
     cout << endl;
 
+    //csr.show_verticies();
     std::vector<WordDist*> closest_words = collective_closest(source_words, num_source_words, csr);
     
     cout << "Closest words:" << endl;
     for (int i = 0; i < 10; i++) {
+        if (i >= closest_words.size()) {
+            cout << "End" << endl;
+            break;
+        }
         cout << csr.idx_to_word(closest_words[i]->word_id) << " (Dist: "
             << closest_words[i]->dist << ")" << endl;
     }
 
-
-    /*int i = csr->word_to_idx("april");
-    int beg = csr->beg_pos[i];
-    int end = csr->beg_pos[i + 1];
-    cout << csr->words[i] << " neighbor list" << endl;
-    for (int j = beg; j < end; j++) {
-        cout << csr->adj_list[j] << ", weight: " << csr->weight_list[j] << endl;
-    }
-    cout << endl;*/
 } 
