@@ -5,7 +5,8 @@
 #include <vector>
 #include <algorithm>
 #include <limits>
-#include "CSR.h"
+#include <cstring>
+#include "graph.h"
 
 using std::cout;
 using std::endl;
@@ -129,35 +130,37 @@ std::vector<WordDist*> collective_closest(const char **source_words, int n, CSR 
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        cout << "Enter edgelist filename" << endl;
-        if (argc < 3)
+    if (argc < 4) {
+        cout << "Enter data file basename" << endl;
+        if (argc < 5)
             cout << "Enter source words" << endl;
         return 1;
     }
 
-    const char *edgefilename = argv[1];
+    const char *beg_file = argv[1];
+    const char *csr_file = argv[2];
+    const char *weight_file = argv[3];
 
-    int num_source_words = argc - 2;
+    int num_source_words = argc - 4;
     const char **source_words = new const char*[num_source_words];
     for (int i = 0; i < num_source_words; i++) {
-        source_words[i] = argv[i + 2];
+        source_words[i] = argv[i + 4];
     }
 
 
-    CSR csr(edgefilename);
+    graph<int, int, double, int, int, double> csr(beg_file, csr_file, weight_file);
+
     std::cout << "Num verticies " << csr.vertex_count << endl;
     std::cout << "Num edges " << csr.edge_count << endl;
 
-    for (int i = 0; i < num_source_words; i++) {
+    /*for (int i = 0; i < num_source_words; i++) {
         if (!csr.word_in_graph(source_words[i])) {
             cout << "Not found in graph: " << source_words[i] << endl;
             return 1;
         }
     }
-    cout << endl;
+    cout << endl;*/
 
-    //csr.show_verticies();
     std::vector<WordDist*> closest_words = collective_closest(source_words, num_source_words, csr);
     
     cout << "Closest words:" << endl;
