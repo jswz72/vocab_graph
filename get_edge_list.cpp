@@ -13,6 +13,10 @@
 
 using std::cout;
 using std::endl;
+using std::string;
+
+const string ofname = "edge-list.txt";
+const string woname = "word-order.txt";
 
 double euclidean_dist(std::vector<double> const &x, std::vector<double> const &y) {
     double sum = 0;
@@ -23,10 +27,10 @@ double euclidean_dist(std::vector<double> const &x, std::vector<double> const &y
     return sqrt(sum);
 }
 
-std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
-		std::vector<std::tuple<std::string, std::vector<double > > > const &word_vecs, double threshold) {
+std::vector<std::tuple<string, string, double> > create_edge_list(
+		std::vector<std::tuple<string, std::vector<double > > > const &word_vecs, double threshold) {
 
-	std::vector<std::tuple<std::string, std::string, double> > edge_list;
+	std::vector<std::tuple<string, string, double> > edge_list;
 	cout << "Word vec size: " << word_vecs.size() << endl;
  
 	size_t *threadwork;
@@ -39,7 +43,7 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
 			threadwork = new size_t[threadcount + 1];
 			cout << "Using " << threadcount << " threads" << endl;
         }
-        std::vector<std::tuple<std::string, std::string, double> > inner_edge_list;
+        std::vector<std::tuple<string, string, double> > inner_edge_list;
 
         #pragma omp for schedule(static) nowait
         for (int i = 0; i < word_vecs.size(); i++) {
@@ -60,7 +64,7 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
         {
             int sum_work = 0;
             for(int i = 1; i <= threadcount; i++) {
-		threadwork[i] += threadwork[i - 1];
+				threadwork[i] += threadwork[i - 1];
             }
             edge_list.resize(edge_list.size() + threadwork[threadcount]);
         }
@@ -70,13 +74,13 @@ std::vector<std::tuple<std::string, std::string, double> > create_edge_list(
 	return edge_list;
 };
 
-std::vector<std::tuple<std::string, std::vector<double> > > parse_word_vectors(
+std::vector<std::tuple<string, std::vector<double> > > parse_word_vectors(
 		const char *vecfilename, 
 		int limit) {
     std::ifstream infile(vecfilename);
-    std::string line;
+    string line;
 
-	std::vector<std::tuple<std::string, std::vector<double > > > words;
+	std::vector<std::tuple<string, std::vector<double > > > words;
     //only read until limit lines
     int counter = 0;
     while (std::getline(infile, line)) {
@@ -84,7 +88,7 @@ std::vector<std::tuple<std::string, std::vector<double> > > parse_word_vectors(
             break;
         }
         std::istringstream iss(line);
-        std::string word;
+        string word;
         iss >> word;
 	// only take alphanumeric 
         bool alphanum = true;
@@ -106,24 +110,66 @@ std::vector<std::tuple<std::string, std::vector<double> > > parse_word_vectors(
     return words;
 }
 
+void write_edge_list(std::vector<std::tuple<string, string, double> >&edge_list) {
+	std::ofstream outfile(ofname);
+	for (auto& edge: edge_list) {
+		outfile << std::get<0>(edge) << " " 
+			<< std::get<1>(edge) << " " << std::get<2>(edge) << endl;
+	}
+}
+
+
+void write_edge_list_to_nums(std::vector<std::tuple<string, string, double> > &edge_list) {
+	std::ofstream outfile(ofname);
+	std::ofstream word_order(woname);
+    std::unordered_map<std::string, int> words;
+    int counter = 0;
+
+	for (auto& edge: edge_list) {
+		string vtx1 = std::get<0>(edge);
+		string vtx2 = std::get<1>(edge);
+		double weight = std::get<2>(edge);
+		if (words.find(vtx1) == words.end()) {
+			words[vtx1] = counter++;
+			word_order << vtx1 << endl;
+		}
+		if (words.find(vtx2) == words.end()) {
+			words[vtx2] = counter++;
+			word_order << vtx2 << endl;
+		}
+        outfile << words[vtx1] << " " << words[vtx2] << " " << weight << "\n";
+	}
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        cout << "Provide vecfile" << endl;
+        cout << "./exec vecfile outfile(optional)"
+			<< "threshold(optional) limit(optional) "
+			<< "to_nums(optional)" << endl;
         return 1;
     }
     const char *vecfilename = argv[1];
-    const double threshold = argc > 2 ? atof(argv[2]) : 0;
-    const int limit = argc > 3 ? atoi(argv[3]) : 0;
+    const int write_file = argc > 2 ? atoi(argv[2]) : 0;
+    const double threshold = argc > 3 ? atof(argv[3]) : 0;
+    const int limit = argc > 4 ? atoi(argv[4]) : 0;
+	const int to_nums = argc > 5 ? atoi(argv[5]) : 0;
 
     auto words = parse_word_vectors(vecfilename, limit);
 
     double start_time = omp_get_wtime();
     auto edge_list = create_edge_list(words, threshold);
     double endtime = omp_get_wtime() - start_time;
-    for (auto& edge: edge_list) {
-	cout << std::get<0>(edge) << " " 
-		<< std::get<1>(edge) << " " << std::get<2>(edge) << endl;
-    }
+	if (write_file) {
+		if (to_nums)
+			write_edge_list_to_nums(edge_list);
+		else
+			write_edge_list(edge_list);
+	} else {
+		for (auto& edge: edge_list) {
+			cout << std::get<0>(edge) << " " 
+				<< std::get<1>(edge) << " " << std::get<2>(edge) << endl;
+		}
+	}
     cout << "Num edges: " << edge_list.size() << endl;
     cout << "Time: " << endtime << endl;
 
