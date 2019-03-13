@@ -47,7 +47,7 @@ using namespace std;
 
 typedef long int vertex_t;
 typedef long int index_t;
-typedef long int weight_t;
+typedef double weight_t;
 
 inline off_t fsize(const char *filename) {
     struct stat st; 
@@ -215,8 +215,8 @@ assert(fd6 != NULL);
 
 //ftruncate(fd6, edge_count*sizeof(vertex_t));
 //vertex_t* weight_file= (vertex_t*)mmap(NULL,edge_count*sizeof(vertex_t),PROT_READ|PROT_WRITE,MAP_SHARED,fd6,0);
-vertex_t* weight= (vertex_t*)mmap(NULL,
-        edge_count*sizeof(vertex_t),
+weight_t* weight= (weight_t*)mmap(NULL,
+        edge_count*sizeof(weight_t),
         PROT_READ|PROT_WRITE,
         MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
 assert(weight != MAP_FAILED);
@@ -353,7 +353,8 @@ while(offset<line_count){
           adj[begin[v_id]+degree[v_id]] = index;
     }
     //if(is_reverse) adj[begin[v_id]+degree[v_id]] = index;
-    vertex_t wtvalue;
+    //vertex_t wtvalue;
+    weight_t wtvalue;
     
     if(weightFlag!=0)
     {
@@ -368,7 +369,7 @@ while(offset<line_count){
     curr=next;
     char* sss2=ss+curr;
     //int wtvalue=atol(sss2);
-    /*weight_t*/  wtvalue=atol(sss2);
+    /*weight_t*/  wtvalue=atof(sss2);
     //~ /Cosidering the weight is present in the file as third column anil 21 June
     }
     else
@@ -381,6 +382,7 @@ while(offset<line_count){
    // if(is_reverse) adj[begin[v_id]+degree[v_id]] = wtvalue;
 
 //    	vertex_t rand_weight=(rand()%63+1);
+	std::cout << "DEBUG: " << wtvalue << std::endl;
     weight[begin[index]+degree[index]] = wtvalue;// rand_weight;
     if(is_reverse)
         weight[begin[v_id]+degree[v_id]] = wtvalue;//rand_weight;
