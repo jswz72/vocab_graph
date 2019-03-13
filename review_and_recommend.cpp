@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <limits>
 #include <cstring>
-#include "graph.h"
 
 using std::cout;
 using std::endl;
@@ -14,7 +13,6 @@ using std::string;
 
 const double DOUBLE_MAX = std::numeric_limits<double>::max();
 const double DOUBLE_INF = std::numeric_limits<double>::infinity();
-double NO_RELATION;
 
 struct WordDist {
     double dist;
@@ -129,30 +127,11 @@ std::vector<WordDist*> collective_closest(const char **source_words, int n, CSR 
     return related_words;
 }
 
-int main(int argc, char *argv[]) {
-    if (argc < 4) {
-        cout << "Enter data file basename" << endl;
-        if (argc < 5)
-            cout << "Enter source words" << endl;
-        return 1;
-    }
-
-    const char *beg_file = argv[1];
-    const char *csr_file = argv[2];
-    const char *weight_file = argv[3];
-
-    int num_source_words = argc - 4;
-    const char **source_words = new const char*[num_source_words];
+void review_and_rec(const char **source_words) {
+    /*const char **source_words = new const char*[num_source_words];
     for (int i = 0; i < num_source_words; i++) {
         source_words[i] = argv[i + 4];
-    }
-
-
-    graph<int, int, double, int, int, double> csr(beg_file, csr_file, weight_file);
-
-    std::cout << "Num verticies " << csr.vertex_count << endl;
-    std::cout << "Num edges " << csr.edge_count << endl;
-
+    }*/
     /*for (int i = 0; i < num_source_words; i++) {
         if (!csr.word_in_graph(source_words[i])) {
             cout << "Not found in graph: " << source_words[i] << endl;
@@ -162,7 +141,6 @@ int main(int argc, char *argv[]) {
     cout << endl;*/
 
     std::vector<WordDist*> closest_words = collective_closest(source_words, num_source_words, csr);
-    
     cout << "Closest words:" << endl;
     for (int i = 0; i < 10; i++) {
         if (i >= closest_words.size()) {
@@ -172,5 +150,4 @@ int main(int argc, char *argv[]) {
         cout << csr.idx_to_word(closest_words[i]->word_id) << " (Dist: "
             << closest_words[i]->dist << ")" << endl;
     }
-
 } 

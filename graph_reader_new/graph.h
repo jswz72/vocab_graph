@@ -24,7 +24,6 @@ class graph
 		new_index_t *beg_pos;
 		new_vert_t *csr;
 		new_weight_t *weight;
-        //new_vert_t* weight;
 		new_index_t vert_count;
 		new_index_t edge_count;
 
