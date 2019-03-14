@@ -43,3 +43,8 @@ Use `graph_reader_new` to read binary CSR and perform any operations defined in 
 Used from, and explained at [graph_project_start](https://github.com/asherliu/graph_project_start)  
 Can use `read_and_exec.sh` to facillitate this by just passing the base name of the `*beg_pos/*csr/*weight` files  
 
+### Word Recommendations and Reviewing
+#### New Word Recommendations
+Given a list of known words, new words in the graph will be recommended on a basis of collective closeness to given words.  These recommendations are sorted in order of most alike (or least collective distance).
+#### Review order Recommendations
+Given a list of known/learned words, and a list of already reviewed words, learned words will be recommended to be reviewed in order of their collective closeness to already reviewed words.  If no reviewed words are given, a random word is chosen from learn words to be the base reviewed word. 
