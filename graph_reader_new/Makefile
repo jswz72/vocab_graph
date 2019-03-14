@@ -1,8 +1,8 @@
 exe = graph_loader.bin 
 
 cc = "$(shell which g++)" 
-#flags = -I. -fopenmp -march=athlon64 -O3
-flags = -I. -O3
+flags = -I. -fopenmp -march=athlon64 -O3
+#flags = -I. -O3
 #flags += -std=c++11
 
 ifeq ($(debug), 1)

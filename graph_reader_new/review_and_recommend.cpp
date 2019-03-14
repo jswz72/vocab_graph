@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <limits>
 #include <cstring>
+#include <omp.h>
 #include "graph.h"
 #include "review_and_recommend.h"
 
@@ -92,17 +93,28 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
     double *dist = (double *)malloc(sizeof(double) * n * csr->vert_count);
 
     // All vtxs, sorted in terms of closest
-    std::vector<WordDist*> word_dist;
+	WordDist ** word_dist = (WordDist **)malloc(sizeof(WordDist*) * csr->vert_count);
+    //std::vector<WordDist*> word_dist;
 
     // Fill out dists to all vtxs (dist col) from word (dist row)
-    for (int i = 0; i < n; i++)
-        SSSP(csr, source_words[i], dist, i);
+	#pragma omp parallel 
+	{
+		int threadcount = omp_get_num_threads();
+		#pragma omp single
+		{
+			cout << "Using " << threadcount << " threads" << endl;
+		}
+		#pragma omp for schedule(static)
+		for (int i = 0; i < n; i++)
+			SSSP(csr, source_words[i], dist, i);
 
-    // Get collective dist of vtx (col) to all source words (row)
-    for (int i = 0; i < csr->vert_count; i++) {
-		WordDist *wd = new WordDist(get_collective_dist(dist, n, csr->vert_count, i), i);
-        word_dist.push_back(wd);
-    }
+		// Get collective dist of vtx (col) to all source words (row)
+		#pragma omp for schedule(static)
+		for (int i = 0; i < csr->vert_count; i++) {
+			WordDist *wd = new WordDist(get_collective_dist(dist, n, csr->vert_count, i), i);
+			word_dist[i] = wd;
+		}
+	}
 
     // Word has no relation to given set
     double no_relation = (1 / DOUBLE_MAX) * n;
@@ -110,7 +122,7 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
     std::vector<WordDist*> related_words;
 
     // Filter out all dists that are 0 or not related
-    std::copy_if(word_dist.begin(), word_dist.end(), 
+    std::copy_if(word_dist, word_dist + csr->vert_count, 
             std::back_inserter(related_words), [no_relation](WordDist *a) -> bool {
                     return a->dist != DOUBLE_INF && a->dist != no_relation;
     });
@@ -123,16 +135,27 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
     return related_words;
 }
 
-void review_and_rec(CSR *csr, std::vector<int> &source_words, std::vector<string> word_mappings, int n) {
+std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs) {
 
     std::vector<WordDist*> closest_words = collective_closest(source_words, source_words.size(), csr);
-    cout << "\nClosest words:" << endl;
-    for (int i = 0; i < n; i++) {
-        if (i >= closest_words.size()) {
-            cout << "End" << endl;
-            break;
-        }
-        cout << word_mappings[closest_words[i]->word_id] << " (Dist: "
-            << closest_words[i]->dist << ")" << endl;
-    }
+	if (num_recs < closest_words.size())
+		closest_words.resize(num_recs);
+	return closest_words;
 } 
+
+std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned, int rev_count) {
+	std::vector<WordDist*> word_dists = collective_closest(reviewed, reviewed.size(), csr);
+	std::vector<int> cur_review_set;
+	
+	for (int i = 0; i < word_dists.size(); i++) {
+		int cur_id = word_dists[i]->word_id;
+		bool is_learned = std::find(learned.begin(), learned.end(), cur_id) != learned.end();
+		bool is_in_cur_rev= std::find(cur_review_set.begin(), cur_review_set.end(), cur_id) != cur_review_set.end();
+		if (is_learned && !is_in_cur_rev)
+			cur_review_set.push_back(cur_id);
+		if (cur_review_set.size() == rev_count)
+			break;
+	}
+
+	return cur_review_set;
+}

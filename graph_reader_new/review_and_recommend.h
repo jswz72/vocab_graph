@@ -10,5 +10,7 @@ const double DOUBLE_MAX = std::numeric_limits<double>::max();
 const double DOUBLE_INF = std::numeric_limits<double>::infinity();
 
 typedef graph<long, long, double, long, long, double> CSR;
-void review_and_rec(CSR *csr, std::vector<int> &source_words, std::vector<std::string> word_mappings, int n);
+std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs);
+
+std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned, int rec_count);
 #endif
