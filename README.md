@@ -17,16 +17,20 @@ Can output to console or file.
 
 ----
 Cpp version:
-`./executable vectorfile euclidean_distance_threshold limit`  
- Same params as above  
- Writes to console  
+`./executable vectorfile outfile euclidean_distance_threshold limit to_nums`  
+- vectorfile: input file of word vectors
+- outfile: 1 to write `edge-list.txt` file, 0 or ommitted to print to stdout
+- `euclidean_distance_threshold`: all edges added to the list must have weights less than this value (optional)
+- limit: how many lines to read from vectorfile (omit or enter 0 to read all)  
+- `to_nums`: 1 to translate output vector to `int int double` form (also creates `word-order.txt` to transfer back to string), 0 to leave output as `string string double`
+ Writes to console or 
  Uses openmp multithreading, use env params to specify num threads 
 
 ### To process edgelist:
-Need to convert `string string num` representation to `num num num` for easier processing:  
+If in `string string num` representation, need to convert to `num num num` for easier processing:  
 Use `edge_list_to_nums.cpp`  
 `./executable vector_file_input vector_file_output`  
-Will also create `word-order.txt` file in output directory, for use in later processing back to string words
+Will also create `word-order.txt` file in output directory, for use in use in mapping back to string words
 
 ----
 Use `tuple_text_to_binary_csr_mem_weight` to write a binary CSR graph of the previous numeric edgelist  

@@ -143,7 +143,7 @@ void write_edge_list_to_nums(std::vector<std::tuple<string, string, double> > &e
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        cout << "./exec vecfile outfile(optional)"
+        cout << "./exec vecfile outfile(optional) "
 			<< "threshold(optional) limit(optional) "
 			<< "to_nums(optional)" << endl;
         return 1;

@@ -1,8 +1,14 @@
 #include <iostream>
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <fstream>
 #include "graph.h"
+#include "review_and_recommend.h"
 
 using std::cout;
 using std::endl;
+using std::string;
 
 template<typename G>
 void print_edges(G *csr) {
@@ -20,36 +26,48 @@ void print_edges(G *csr) {
     }
 }
 
-int main(int argc, char **argv)
-{
-	if (argc < 4) {
-		cout << "Input: ./exe beg csr weight" << endl;
+std::vector<string> get_word_mapping(const char *mapping_file) {
+	std::ifstream infile(mapping_file);
+	std::vector<string> words;
+	string line;
+	while (std::getline(infile, line))
+		words.push_back(line);
+	return words;
+}
+
+int main(int argc, char **argv) {
+	if (argc < 5) {
+		cout << "Input: ./exe beg csr weight mapping source_words..." << endl;
 		return 1;
 	}
 	
-	const char *beg_file=argv[1];
-	const char *csr_file=argv[2];
-	const char *weight_file=argv[3];
+	const char *beg_file = argv[1];
+	const char *csr_file = argv[2];
+	const char *weight_file = argv[3];
+	const char *mapping_file = argv[4];
 	
 	graph<long, long, double, long, long, double> *csr = 
 		new graph <long, long, double, long, long, double>
 		(beg_file, csr_file, weight_file);
 
-	int num_source_words = argc - 4;
-	const char **source_words = new const char*[num_source_words];
-    for (int i = 0; i < num_source_words; i++) {
-        source_words[i] = argv[i + 4];
-    }
-    for (int i = 0; i < num_source_words; i++) {
-		cout << source_words[i] << endl;
-        /*if (!csr.word_in_graph(source_words[i])) {
-            cout << "Not found in graph: " << source_words[i] << endl;
-            return 1;
-        }*/
-    }
-    cout << endl;
-
-    std::cout << "Edges: " << csr->edge_count << std::endl;
+	std::cout << "Edges: " << csr->edge_count << std::endl;
     std::cout << "Verticies: " << csr->vert_count << std::endl;
+
+	int num_source_words = argc - 5;
+	std::vector<int> source_word_idxs;
+	std::vector<string> words = get_word_mapping(mapping_file);
+
+    for (int i = 0; i < num_source_words; i++) {
+		const char *source_word = argv[i + 5];
+		auto it = std::find(words.begin(), words.end(), source_word);
+		if (it == words.end()) {
+			cout << "Not found in graph: " << source_word << endl;
+			return 1;
+		}
+		int idx = std::distance(words.begin(), it);
+		source_word_idxs.push_back(idx);
+    }
+
+	ReviewAndRec::review_and_rec(csr, source_word_idxs, words, 10);
 	return 0;	
 }
