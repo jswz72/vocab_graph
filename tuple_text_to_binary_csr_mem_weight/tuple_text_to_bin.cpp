@@ -131,7 +131,6 @@ int main(int argc, char** argv){
     int checkwt=0;//checkwt=3 for weight
     while(next<file_size){
         char* sss=ss+curr;
-        //std::cout << "DEBUG: " << sss << endl;
         a = atol(sss);
         if(weightFlag!=0)
         {
@@ -382,7 +381,6 @@ while(offset<line_count){
    // if(is_reverse) adj[begin[v_id]+degree[v_id]] = wtvalue;
 
 //    	vertex_t rand_weight=(rand()%63+1);
-	std::cout << "DEBUG: " << wtvalue << std::endl;
     weight[begin[index]+degree[index]] = wtvalue;// rand_weight;
     if(is_reverse)
         weight[begin[v_id]+degree[v_id]] = wtvalue;//rand_weight;

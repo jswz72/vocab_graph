@@ -105,8 +105,9 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
 			cout << "Using " << threadcount << " threads" << endl;
 		}
 		#pragma omp for schedule(static)
-		for (int i = 0; i < n; i++)
+		for (int i = 0; i < n; i++) {
 			SSSP(csr, source_words[i], dist, i);
+		}
 
 		// Get collective dist of vtx (col) to all source words (row)
 		#pragma omp for schedule(static)
@@ -137,15 +138,20 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
 
 std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs) {
 
+	double start_time = omp_get_wtime();
     std::vector<WordDist*> closest_words = collective_closest(source_words, source_words.size(), csr);
+	cout << "Time: " << omp_get_wtime() - start_time << endl;
 	if (num_recs < closest_words.size())
 		closest_words.resize(num_recs);
 	return closest_words;
 } 
 
 std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned, int rev_count) {
+	double start_time = omp_get_wtime();
 	std::vector<WordDist*> word_dists = collective_closest(reviewed, reviewed.size(), csr);
 	std::vector<int> cur_review_set;
+	double collec_closest_time = omp_get_wtime();
+	cout << "Algo Time: " << collec_closest_time - start_time << endl;
 	
 	for (int i = 0; i < word_dists.size(); i++) {
 		int cur_id = word_dists[i]->word_id;
@@ -156,6 +162,8 @@ std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> 
 		if (cur_review_set.size() == rev_count)
 			break;
 	}
+	double final_time = omp_get_wtime() - start_time;
+	cout << "Final Time: " << final_time << endl;
 
 	return cur_review_set;
 }
