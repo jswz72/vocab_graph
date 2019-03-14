@@ -78,7 +78,7 @@ double shortest_path_weights(CSR *csr, int source, int target)
     return distances[target];
 }
 
-// Single Shortest Path from Source... Source is given source word
+/*// Single Shortest Path from Source... Source is given source word
 void SSSP(CSR *csr, int source_word, double *dist, int row) {
 
     int cols = csr->vert_count;
@@ -86,7 +86,7 @@ void SSSP(CSR *csr, int source_word, double *dist, int row) {
         double tmp = shortest_path_weights(csr, source_word, i);
         dist[row * cols + i]  = tmp;
     }
-}
+}*/
 
 std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, CSR *csr) {
     // Row for each source word, col for each vtx
@@ -105,10 +105,14 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
 		{
 			cout << "Using " << threadcount << " threads" << endl;
 		}
-		#pragma omp for schedule(static)
 		for (int i = 0; i < n; i++) {
-			SSSP(csr, source_words[i], dist, i);
-			cout << "SSSP done for " << threadid << endl;
+			//SSSP(csr, source_words[i], dist, i);
+			int cols = csr->vert_count;
+			#pragma omp for schedule(static)
+			for (int j = 0; j < cols; j++) {
+				double tmp = shortest_path_weights(csr, source_words[i], j);
+				dist[i * cols + j]  = tmp;
+			}
 		}
 
 		// Get collective dist of vtx (col) to all source words (row)
