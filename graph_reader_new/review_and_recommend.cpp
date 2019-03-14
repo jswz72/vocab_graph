@@ -100,6 +100,7 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
 	#pragma omp parallel 
 	{
 		int threadcount = omp_get_num_threads();
+		int threadid = omp_get_thread_num();
 		#pragma omp single
 		{
 			cout << "Using " << threadcount << " threads" << endl;
@@ -107,6 +108,7 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
 		#pragma omp for schedule(static)
 		for (int i = 0; i < n; i++) {
 			SSSP(csr, source_words[i], dist, i);
+			cout << "SSSP done for " << threadid << endl;
 		}
 
 		// Get collective dist of vtx (col) to all source words (row)
