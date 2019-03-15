@@ -22,23 +22,23 @@ Cpp version:
 - outfile: 1 to write `edge-list.txt` file, 0 or ommitted to print to stdout
 - `euclidean_distance_threshold`: all edges added to the list must have weights less than this value (optional)
 - limit: how many lines to read from vectorfile (omit or enter 0 to read all)  
-- `to_nums`: 1 to translate output vector to `int int double` form (also creates `word-order.txt` to transfer back to string), 0 to leave output as `string string double`
- Writes to console or 
+- `to_nums`: 1 to translate output vector to `int int double` form (also creates `word-order.txt` to transfer back to string), 0 to leave output as `string string double`  
  Uses openmp multithreading, use env params to specify num threads 
 
 ### To process edgelist:
-If in `string string num` representation, need to convert to `num num num` for easier processing:  
+If in `string string double` representation, need to convert to `int int double` for easier processing:  
 Use `edge_list_to_nums.cpp`  
 `./executable vector_file_input vector_file_output`  
-Will also create `word-order.txt` file in output directory, for use in use in mapping back to string words
+Will also create `word-order.txt` file in output directory, for use in use in mapping back to string words  
+If already in `int int double`, carry on
 
 ----
-Use `tuple_text_to_binary_csr_mem_weight` to write a binary CSR graph of the previous numeric edgelist  
+Use `tuple_text_to_binary_csr_mem_weight` directory to write a binary CSR graph representation of the previous numeric edgelist  
 `./executable edge_list_file reverse_edges(1/0) lines_to_skip(0+) thread_count(1+) write_weights(1/0)`  
-Used from, and explained at [graph_project_start](https://github.com/asherliu/graph_project_start)
+Used and modified from, and explained at [graph_project_start](https://github.com/asherliu/graph_project_start)
 
 ----
-`graph_reader_new` is used to read binary CSR and perform any operations defined within (`review_and_recommend`, etc.)    
+`graph_reader_new` directory is used to read previously created binary CSR and perform any operations defined (`review_and_recommend`, etc.)    
 Used from (with modifications), and explained at [graph_project_start](https://github.com/asherliu/graph_project_start)  
 Used for the below algorithms  
 
@@ -56,4 +56,5 @@ Given a list of known/learned words, and a list of already reviewed words, learn
 - `base_file`: same as above
 - `mapping_file`: same as above
 - `num_to_review`: number of sorted review items to recommend this round  
+  
 Learned and reviewed words will be prompted for after running program
