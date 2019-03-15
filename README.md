@@ -58,3 +58,30 @@ Given a list of known/learned words, and a list of already reviewed words, learn
 - `num_to_review`: number of sorted review items to recommend this round  
   
 Learned and reviewed words will be prompted for after running program
+
+### Demo
+Order of operations for test run would be as follows:  
+#### If starting from edgelist in (string string double) form
+(tg.txt file is included)
+```
+make
+./edge_list_to_nums.bin ./data/tg.txt ./data/tg-nums.txt
+./tuple_text_to_binary_csr_mem_weight/text_to_bin.bin ./data/tg-nums.txt 0 0 1 1
+./graph_reader_new/recommend.bin ./data/tg-nums.txt ./data/word-order.txt 10 sox earthquake manchester abc
+**OUTPUT**:
+Learning recommendations :
+yankees (Value: 0.829524)
+nbc (Value: 0.79526)
+cbs (Value: 0.779539)
+quake (Value: 0.601341)
+liverpool (Value: 0.585569)
+End
+***
+```  
+End is printed if number of available recommendations is lower than given recommendation count
+
+#### If starting from vectorfile
+(vecfile.txt is not included)  
+`./get_edge_list.bin vecfile.txt edgefile.txt 3 0 1`  
+then use output `edgefile.txt` in above operations
+
