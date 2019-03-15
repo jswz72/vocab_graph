@@ -5,7 +5,6 @@
 #include <fstream>
 #include <cstdlib>
 #include "graph.h"
-#include "review_and_recommend.h"
 
 using std::cout;
 using std::endl;

@@ -1,8 +1,5 @@
-exe = graph_loader.bin 
-
 cc = "$(shell which g++)" 
 flags = -I. -fopenmp -march=athlon64 -O3
-#flags = -I. -O3
 flags += -std=c++11
 
 ifeq ($(debug), 1)
@@ -12,18 +9,15 @@ endif
 objs = $(patsubst %.cpp,%.o,$(wildcard ../../lib/*.cpp)) \
 			$(patsubst %.cpp,%.o,$(wildcard *.cpp))
 
-deps = $(wildcard ./*.hpp) \
-				$(wildcard *.h) \
-				Makefile
+dep=review_and_recommend.cpp utils.cpp
 
-%.o:%.cpp $(deps)
-	$(cc) -c $< -o $@ $(flags)
+default: review recommend
 
-$(exe):$(objs)
-	$(cc) $(objs) -o $(exe) $(flags)
+review:
+	$(cc) review.cpp ${dep} $(flags) -o review.bin
 
-test:$(exe)
-	./cpu_ibfs /home/hang/scale_16/beg_16_16.bin /home/hang/scale_16/csr_16_16.bin 64 128 2 
+recommend:
+	$(cc) recommend.cpp ${dep} $(flags) -o recommend.bin
 
 clean:
 	rm -rf $(exe) $(objs) 
