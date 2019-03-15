@@ -1,3 +1,4 @@
+#include <exception>
 #include <iostream>
 #include <algorithm>
 #include <string>
@@ -11,6 +12,21 @@
 using std::cout;
 using std::endl;
 using std::string;
+
+std::vector<int> get_idxs_from_words(std::vector<string> &source_words, std::vector<string> &words_in_graph) {
+	std::vector<int> idx_arr;
+	for (int i = 0; i < source_words.size(); i++) {
+		string source_word = source_words[i];
+		auto it = std::find(words_in_graph.begin(), words_in_graph.end(), source_word);
+		if (it == words_in_graph.end()) {
+			cout << source_word;
+			throw " Not found in graph";
+		}
+		int idx = std::distance(words_in_graph.begin(), it);
+		idx_arr.push_back(idx);
+    }
+	return idx_arr;
+}
 
 int main(int argc, char **argv) {
 	if (argc < 4) {
@@ -50,38 +66,22 @@ int main(int argc, char **argv) {
 	while (isreviewed >> word)
 		reviewed_words.push_back(word);
 
-
-	int num_source_words = argc - 6;
-	std::vector<int> source_word_idxs;
 	std::vector<string> words = Utils::get_word_mapping(mapping_file);
 
 	std::vector<int> learned_words_idx;
 	std::vector<int> reviewed_words_idx;
-
-    for (int i = 0; i < learned_words.size(); i++) {
-		string source_word = learned_words[i];
-		auto it = std::find(words.begin(), words.end(), source_word);
-		if (it == words.end()) {
-			cout << "Not found in graph: " << source_word << endl;
-			return 1;
-		}
-		int idx = std::distance(words.begin(), it);
-		learned_words_idx.push_back(idx);
-    }
-    for (int i = 0; i < reviewed_words.size(); i++) {
-		string source_word = reviewed_words[i];
-		auto it = std::find(words.begin(), words.end(), source_word);
-		if (it == words.end()) {
-			cout << "Not found in graph: " << source_word << endl;
-			return 1;
-		}
-		int idx = std::distance(words.begin(), it);
-		reviewed_words_idx.push_back(idx);
-    }
-
+	try {
+		learned_words_idx = get_idxs_from_words(learned_words, words);
+		reviewed_words_idx = get_idxs_from_words(reviewed_words, words);
+	}
+	catch (const char *strExp) {
+		cout << strExp << endl;
+		return 1;
+	}
+	
 	// take random word from learned
 	if (reviewed_words_idx.size() == 0)
-		reviewed_words_idx.push_back(learned_words_idx[rand() % source_word_idxs.size()]);
+		reviewed_words_idx.push_back(learned_words_idx[rand() % learned_words_idx.size()]);
 
 	std::vector<int> to_review = ReviewAndRec::review(csr, reviewed_words_idx, learned_words_idx, num_to_review);
 
