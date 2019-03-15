@@ -11,7 +11,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
-const int num_recs = 10;
+const int num_recs = 100;
 string REV_CMD = "rev";
 string REC_CMD = "rec";
 

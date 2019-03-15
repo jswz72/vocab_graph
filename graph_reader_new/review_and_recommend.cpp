@@ -42,11 +42,11 @@ int min_dist(double distances[], unsigned int path[], int verticies)
 /**
  * Find shortest weighted path using djikstra's algorithm
  */
-double shortest_path_weights(CSR *csr, int source, int target)
+double *shortest_path_weights(CSR *csr, int source)
 {
     int verticies = csr->vert_count;
     // distance from start to vertex 
-    double distances[verticies];
+    double *distances = new double[verticies];
     // bitset true if included in path
     unsigned int path[verticies];
     for (int i = 0; i < verticies; i++)
@@ -55,7 +55,6 @@ double shortest_path_weights(CSR *csr, int source, int target)
         path[i] = 0;
     }
 
-    //int source_idx = csr.word_to_idx(source); TODO?
     distances[source] = 0;
     for (int count = 0; count < verticies - 1; count++)
     {
@@ -65,7 +64,6 @@ double shortest_path_weights(CSR *csr, int source, int target)
         // Update distances
         for (int i = csr->beg_pos[cur]; i < csr->beg_pos[cur+1]; i++)
         {
-            //int neighbor = csr.word_to_idx(csr.adj_list[i]); TODO
 			int neighbor = csr->csr[i];
             if (!path[neighbor] && 
                     distances[cur] != DOUBLE_MAX &&
@@ -75,7 +73,7 @@ double shortest_path_weights(CSR *csr, int source, int target)
             }
         }
     }
-    return distances[target];
+    return distances;
 }
 
 /*// Single Shortest Path from Source... Source is given source word
@@ -88,7 +86,7 @@ void SSSP(CSR *csr, int source_word, double *dist, int row) {
     }
 }*/
 
-std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, CSR *csr) {
+WordDist** collective_closest(std::vector<int> source_words, int n, CSR *csr) {
     // Row for each source word, col for each vtx
     double *dist = (double *)malloc(sizeof(double) * n * csr->vert_count);
 
@@ -105,13 +103,13 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
 		{
 			cout << "Using " << threadcount << " threads" << endl;
 		}
+		#pragma omp for schedule(static)
 		for (int i = 0; i < n; i++) {
 			//SSSP(csr, source_words[i], dist, i);
 			int cols = csr->vert_count;
-			#pragma omp for schedule(static)
+			double *shortest_paths = shortest_path_weights(csr, source_words[i]);
 			for (int j = 0; j < cols; j++) {
-				double tmp = shortest_path_weights(csr, source_words[i], j);
-				dist[i * cols + j]  = tmp;
+				dist[i * cols + j] = shortest_paths[j];
 			}
 		}
 
@@ -122,48 +120,47 @@ std::vector<WordDist*> collective_closest(std::vector<int> source_words, int n, 
 			word_dist[i] = wd;
 		}
 	}
-
-    // Word has no relation to given set
-    double no_relation = (1 / DOUBLE_MAX) * n;
-
-    std::vector<WordDist*> related_words;
-
-    // Filter out all dists that are 0 or not related
-    std::copy_if(word_dist, word_dist + csr->vert_count, 
-            std::back_inserter(related_words), [no_relation](WordDist *a) -> bool {
-                    return a->dist != DOUBLE_INF && a->dist != no_relation;
-    });
-    
-    // Sort in terms of collect closest
-    sort(related_words.begin(), related_words.end(), [](WordDist *a, WordDist *b) -> bool
+	std::sort(word_dist, word_dist + csr->vert_count, [](WordDist *a, WordDist *b) -> bool
     {
         return a->dist < b->dist;
     });
-    return related_words;
+
+	return word_dist;
 }
 
 std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs) {
 
 	double start_time = omp_get_wtime();
-    std::vector<WordDist*> closest_words = collective_closest(source_words, source_words.size(), csr);
-	cout << "Time: " << omp_get_wtime() - start_time << endl;
-	if (num_recs < closest_words.size())
-		closest_words.resize(num_recs);
-	return closest_words;
+    WordDist** word_dist = collective_closest(source_words, source_words.size(), csr);
+	cout << "Algo Time: " << omp_get_wtime() - start_time << endl;
+
+	std::vector<WordDist*> related_words;
+    // Word has no relation to given set
+    double no_relation = (1 / DOUBLE_MAX) * source_words.size();
+    // Filter out all dists that are 0 or not related
+    std::copy_if(word_dist, word_dist + csr->vert_count, std::back_inserter(related_words), [no_relation](WordDist *a) -> bool {
+                    return a->dist != DOUBLE_INF && a->dist != no_relation;
+    });
+    
+    // Sort in terms of collect closest
+    
+	if (num_recs < related_words.size())
+		related_words.resize(num_recs);
+	return related_words;
 } 
 
 std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned, int rev_count) {
 	double start_time = omp_get_wtime();
-	std::vector<WordDist*> word_dists = collective_closest(reviewed, reviewed.size(), csr);
+	WordDist** word_dist = collective_closest(reviewed, reviewed.size(), csr);
 	std::vector<int> cur_review_set;
 	double collec_closest_time = omp_get_wtime();
 	cout << "Algo Time: " << collec_closest_time - start_time << endl;
-	
-	for (int i = 0; i < word_dists.size(); i++) {
-		int cur_id = word_dists[i]->word_id;
+
+	for (int i = 0; i < csr->vert_count; i++) {
+		int cur_id = word_dist[i]->word_id;
 		bool is_learned = std::find(learned.begin(), learned.end(), cur_id) != learned.end();
 		bool is_in_cur_rev= std::find(cur_review_set.begin(), cur_review_set.end(), cur_id) != cur_review_set.end();
-		if (is_learned && !is_in_cur_rev)
+		if (word_dist[i]->dist != DOUBLE_INF && is_learned && !is_in_cur_rev)
 			cur_review_set.push_back(cur_id);
 		if (cur_review_set.size() == rev_count)
 			break;
