@@ -122,7 +122,7 @@ WordDist** collective_closest(std::vector<int> source_words, int n, CSR *csr) {
 	}
 	std::sort(word_dist, word_dist + csr->vert_count, [](WordDist *a, WordDist *b) -> bool
     {
-        return a->dist < b->dist;
+        return a->dist > b->dist;
     });
 
 	return word_dist;
