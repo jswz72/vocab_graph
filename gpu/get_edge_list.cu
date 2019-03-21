@@ -27,7 +27,7 @@ __device__ euclidean_dist(double *x, double *y, int dims) {
     return sqrt(sum);
 }
 
-__global__ void create_edge_list(double *word_vecs, int word_vecs_len, double threshold, 
+__global__ void create_edge_list_kernel(double *word_vecs, size_t word_vecs_len, double threshold, 
         double *edge_list, int wv_dims, int *threadwork, size_t *edge_list_size) {
     int wv_num_cols = wv_dims + 1;
 
@@ -158,12 +158,26 @@ int main(int argc, char *argv[]) {
     double *words = parse_word_vectors(vecfilename, limit, 50, &word_size);
 
 	cout << "Word vec size: " << word_size << endl;
+
+	double *words_d;
+	HANDLE_ERR(cudaMalloc((void **) &words_d, sizeof(double) * word_size * 51));
+	double *edge_list_d;
+	HANDLE_ERR(cudaMalloc((void **) &edge_list, sizeof(double) * word_size * word_size * 3));
+	double *threadwork_d;
+	HANDLE_ERR(cudaMalloc((void **) &threadwork_d, sizeof(int) * 128 * 128));
+
+    HANDLE_ERR(cudaMemcpy (words_d, words, sizeof (double) * word_size * 51, cudaMemcpyHostToDevice));
+
     double starttime = wtime();
-    // TODO
-    edge_list = create_edge_list(words, word_size, threshold, edge_list, 50, threadwork, edge_list_size);
+    create_edge_list_kernel <<< 128, 128 >>> (words_d, word_size, threshold, edge_list_d, 50, threadwork_d, edge_list_size);
     double endtime = wtime() - starttime;
+
+	double *edge_list = (double *)malloc(sizeof(double) * 3 * edge_list_size);
+
+    HANDLE_ERR(cudaMemcpy (edge_list, edge_list_d, sizeof(double) * 3 * edge_list_size, cudaMemcpyDeviceToHost));
+
     write_edge_list(edge_list, edge_list_size);
+
     cout << "Num edges: " << edge_list.size() << endl;
     cout << "Time: " << endtime << endl;
-
 }
