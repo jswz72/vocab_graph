@@ -20,7 +20,7 @@ const string woname = "word-order.txt";
 
 double euclidean_dist(std::vector<double> const &x, std::vector<double> const &y) {
     double sum = 0;
-    for (int i = 0; i < x.size(); i++) {
+    for (unsigned int i = 0; i < x.size(); i++) {
         double diff = x[i] - y[i];
         sum += diff * diff;
     }
@@ -46,12 +46,12 @@ std::vector<std::tuple<string, string, double> > create_edge_list(
         std::vector<std::tuple<string, string, double> > inner_edge_list;
 
         #pragma omp for schedule(static) nowait
-        for (int i = 0; i < word_vecs.size(); i++) {
-            for (int j = 0; j < word_vecs.size(); j++) {
+        for (unsigned int i = 0; i < word_vecs.size(); i++) {
+            for (unsigned int j = 0; j < word_vecs.size(); j++) {
                 // No edges to self
                 if (i != j) { 
                     double dist = euclidean_dist(std::get<1>(word_vecs[i]), std::get<1>(word_vecs[j])); 
-                    if (!threshold || threshold && dist < threshold) {
+                    if (!threshold || dist < threshold) {
                         auto edge = std::make_tuple(std::get<0>(word_vecs[i]), std::get<0>(word_vecs[j]), dist); 
                         inner_edge_list.push_back(edge);
                     }
@@ -62,7 +62,6 @@ std::vector<std::tuple<string, string, double> > create_edge_list(
         #pragma omp barrier
         #pragma omp single
         {
-            int sum_work = 0;
             for(int i = 1; i <= threadcount; i++) {
 				threadwork[i] += threadwork[i - 1];
             }
