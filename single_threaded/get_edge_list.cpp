@@ -9,6 +9,7 @@
 #include <cmath>
 #include <unordered_map>
 #include <unordered_set>
+#include "wtime.h"
 
 using std::cout;
 using std::endl;
@@ -129,7 +130,9 @@ int main(int argc, char *argv[]) {
 
     auto words = parse_word_vectors(vecfilename, limit);
 
+    double starttime = wtime();
     auto edge_list = create_edge_list(words, threshold);
+    double endtime = wtime() - starttime;
 	if (write_file) {
 		if (to_nums)
 			write_edge_list_to_nums(edge_list);
@@ -141,7 +144,7 @@ int main(int argc, char *argv[]) {
 				<< std::get<1>(edge) << " " << std::get<2>(edge) << endl;
 		}
 	}
-    //cout << "Num edges: " << edge_list.size() << endl;
-    //cout << "Time: " << endtime << endl;
+    cout << "Num edges: " << edge_list.size() << endl;
+    cout << "Time: " << endtime << endl;
 
 }
