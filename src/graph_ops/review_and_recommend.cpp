@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <algorithm>
 #include <limits>
@@ -76,7 +77,7 @@ double *shortest_path_weights(CSR *csr, int source)
     return distances;
 }
 
-WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr) {
+WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, bool use_rec_pool = false, std::unordered_set<int> &rec_pool = std::unordered_set<int>()) {
     // Row for each source word, col for each vtx
     double *dist = (double *)malloc(sizeof(double) * n * csr->vert_count);
 
@@ -103,10 +104,24 @@ WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr) {
 		// Get collective dist of vtx (col) to all source words (row)
 		#pragma omp for schedule(static)
 		for (int i = 0; i < csr->vert_count; i++) {
-			WordDist *wd = new WordDist(get_collective_dist(dist, n, csr->vert_count, i), i);
-			word_dist[i] = wd;
-		}
+            if (!use_rec_pool || rec_pool.find(i) != rec_pool.end()) {
+                WordDist *wd = new WordDist(get_collective_dist(dist, n, csr->vert_count, i), i);
+                word_dist[i] = wd;
+            } else {
+                word_dist[i] = new WordDist(0, -1);
+            }
+        }
 	}
+    free(dist);
+    if (use_rec_pool) {
+        auto itr = rec_pool.begin();
+        for (int i = 0; i < csr->vert_count; i++) {
+            if (word_dist[i]->word_id == -1) {
+                // todo
+            }
+        }
+    }
+    for (int i = 0; 
     // Sort in terms of collect closest
 	std::sort(word_dist, word_dist + csr->vert_count, [](WordDist *a, WordDist *b) -> bool
     {
