@@ -38,7 +38,7 @@ Use `tuple_text_to_binary_csr_mem_weight` directory to write a binary CSR graph 
 Used and modified from, and explained at [graph_project_start](https://github.com/asherliu/graph_project_start)
 
 ----
-`graph_reader_new` directory is used to read previously created binary CSR and perform any operations defined (`review_and_recommend`, etc.)    
+`graph_ops` directory is used to read previously created binary CSR and perform any operations defined (`review_and_recommend`, etc.)    
 Used from (with modifications), and explained at [graph_project_start](https://github.com/asherliu/graph_project_start)  
 Used for the below algorithms  
 
