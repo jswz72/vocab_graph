@@ -77,7 +77,7 @@ double *shortest_path_weights(CSR *csr, int source)
     return distances;
 }
 
-WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, bool use_rec_pool = false, std::unordered_set<int> &rec_pool = std::unordered_set<int>()) {
+WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, bool use_rec_pool = false, std::unordered_set<int> const &rec_pool = std::unordered_set<int>()) {
     // Row for each source word, col for each vtx
     double *dist = (double *)malloc(sizeof(double) * n * csr->vert_count);
 
@@ -113,22 +113,28 @@ WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, b
         }
 	}
     free(dist);
+
+    WordDist **wd = word_dist;
+    int wd_size = csr->vert_count;
     if (use_rec_pool) {
-        auto itr = rec_pool.begin();
+        WordDist **condensed_word_dist = new WordDist*[rec_pool.size()];
+        int idx = 0;
         for (int i = 0; i < csr->vert_count; i++) {
-            if (word_dist[i]->word_id == -1) {
-                // todo
-            }
+            if (word_dist[i]->word_id != -1)
+                condensed_word_dist[idx++] = word_dist[i];
         }
+        free(word_dist);
+        wd = condensed_word_dist;
+        wd_size = rec_pool.size();
     }
-    for (int i = 0; 
+    
     // Sort in terms of collect closest
-	std::sort(word_dist, word_dist + csr->vert_count, [](WordDist *a, WordDist *b) -> bool
+	std::sort(wd, wd + wd_size, [](WordDist *a, WordDist *b) -> bool
     {
         return a->dist > b->dist;
     });
 
-	return word_dist;
+	return wd;
 }
 
 
