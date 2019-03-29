@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <algorithm>
 
 using std::cout;
 using std::endl;
@@ -31,3 +32,11 @@ std::vector<string> get_word_mapping(const char *mapping_file) {
 		words.push_back(line);
 	return words;
 }
+
+int find_word(std::string &word, std::vector<std::string> &words) {
+    auto it = std::find(words.begin(), words.end(), word);
+    if (it == words.end())
+        return -1;
+    return std::distance(words.begin(), it);
+}
+

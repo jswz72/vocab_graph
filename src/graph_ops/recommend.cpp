@@ -12,14 +12,13 @@ using std::cout;
 using std::endl;
 using std::string;
 
-
 int main(int argc, char **argv) {
 	if (argc < 5) {
 		cout << "Input: ./exe base_file mapping_file num_recs source_word_file rec_pool_file" << endl;
 		return 1;
 	}
 	
-	string base_filename (argv[1]);
+	string base_filename(argv[1]);
 	string beg_file = base_filename + "_beg_pos.bin";
 	string csr_file = base_filename + "_csr.bin";
 	string weight_file = base_filename + "_weight.bin";
@@ -37,40 +36,37 @@ int main(int argc, char **argv) {
 	std::cout << "Edges: " << csr->edge_count << std::endl;
     std::cout << "Verticies: " << csr->vert_count << std::endl;
 
-	std::vector<int> source_word_idxs;
 	std::vector<string> words = Utils::get_word_mapping(mapping_file);
 
     std::ifstream source_word_in(source_word_file);
     string source_word;
-    int counter = 0;
+	std::vector<int> source_word_idxs;
     while (std::getline(source_word_in, source_word)) {
-        auto it = std::find(words.begin(), words.end(), source_word);
-		if (it == words.end()) {
-			cout << "Not found in graph: " << source_word << endl;
-			return 1;
-		}
-		int idx = std::distance(words.begin(), it);
-		source_word_idxs.push_back(idx);
-        counter++;
+        int idx = Utils::find_word(source_word, words);
+        if (idx < 0) {
+            cout << "Not found in graph: " << source_word << endl;
+            return -1;
+        }
+        source_word_idxs.push_back(idx);
     }
-	int num_source_words = counter;
 
     std::vector<WordDist*> closest_words;
     if (use_rec_pool) {
         std::unordered_set<int> rec_pool;
         std::ifstream rec_pool_in(rec_pool_file);
         string rec_word;
-        int counter = 0;
+
+        int missing_counter = 0;
         while (std::getline(rec_pool_in, rec_word)) {
-            auto it = std::find(words.begin(), words.end(), rec_word);
-            if (it != words.end()) {
-                int idx = std::distance(words.begin(), it);
-                rec_pool.insert(idx);
-            } else {
-                counter++;
+            int idx = Utils::find_word(rec_word, words);
+            if (idx < 0) {
+                missing_counter++;
+                continue;
             }
+            rec_pool.insert(idx);
         }
-        cout << counter << " recommendation pool words not in graph" << endl;
+        cout << missing_counter << " recommendation pool words not in graph" << endl;
+
         closest_words = ReviewAndRec::recommend(csr, source_word_idxs, num_recs, true, rec_pool);
     } else {
         closest_words = ReviewAndRec::recommend(csr, source_word_idxs, num_recs);
