@@ -16,7 +16,9 @@ using std::endl;
 using std::string;
 
 
-// Inverse sum rule, closness of vtx to all sources
+/**
+ * Inverse sum rule of distances to source words
+ */
 double get_collective_dist(double *dist, int rows, int cols, int col) {
     double sum = 0;
     for (int i = 0; i < rows; i++) {
@@ -25,6 +27,9 @@ double get_collective_dist(double *dist, int rows, int cols, int col) {
     return sum;
 }
 
+/**
+ * Get minimum distance of indicies not included in path
+ */
 int min_dist(double *distances, unsigned int *path, int verticies)
 {
     double min = DOUBLE_MAX;
@@ -77,6 +82,10 @@ double *shortest_path_weights(CSR *csr, int source)
     return distances;
 }
 
+/**
+ * Return word indices that are collectively closest to all given source word indices,
+ * using aggregated shortest path calculations from given graph.
+ */
 WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, bool use_rec_pool = false, std::unordered_set<int> const &rec_pool = std::unordered_set<int>()) {
     // Row for each source word, col for each vtx
     double *dist = (double *)malloc(sizeof(double) * n * csr->vert_count);
@@ -157,6 +166,7 @@ std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int n
     // Word has no relation to given set
     double no_relation = (1 / DOUBLE_MAX) * source_words.size();
 	
+    // TODO look at resizing to idx of first no_relation (since in-order), while filtering out DOUBLE_INFs
     // Filter out all dists that are 0 (source word) or not related to any source words
     std::copy_if(word_dist, word_dist + wd_size, std::back_inserter(related_words), 
 			[no_relation] (WordDist *a) -> bool {

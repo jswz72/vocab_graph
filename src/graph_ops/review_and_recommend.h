@@ -2,9 +2,10 @@
 #include "graph.h"
 #ifndef ReviewAndRec
 #define ReviewAndRec
+
 struct WordDist {
-    double dist;
-    int word_id;
+    double dist; // Inverse collective dist to all source words 
+    int word_id; // ID of source word corresponding to idx in graph
     WordDist(double dist, int id): dist(dist), word_id(id) {};
 };
 const double DOUBLE_MAX = std::numeric_limits<double>::max();
@@ -15,7 +16,9 @@ typedef graph<long, long, double, long, long, double> CSR;
 /**
  * Given souce words (known), graph, and number to recommend,
  * Recommend new words to learn based of their collective closeness
- * to aready known words
+ * to aready known words.
+ * Optionally takes a recommendation pool - output recommendations will only be given if
+ * they are present in this pool
  */
 std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs, bool use_rec_pool = false, std::unordered_set<int> const &rec_pool = std::unordered_set<int>());
 

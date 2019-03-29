@@ -13,16 +13,17 @@ using std::cout;
 using std::endl;
 using std::string;
 
+// Find numerical indices coressponding to given words
+// Throws if index not found in graph
 std::vector<int> get_idxs_from_words(std::vector<string> &source_words, std::vector<string> &words_in_graph) {
 	std::vector<int> idx_arr;
 	for (int i = 0; i < source_words.size(); i++) {
 		string source_word = source_words[i];
-		auto it = std::find(words_in_graph.begin(), words_in_graph.end(), source_word);
-		if (it == words_in_graph.end()) {
+        int idx = Utils::find_word(source_word, words_in_graph);
+		if (idx < 0) {
 			cout << source_word;
 			throw " Not found in graph";
 		}
-		int idx = std::distance(words_in_graph.begin(), it);
 		idx_arr.push_back(idx);
     }
 	return idx_arr;
