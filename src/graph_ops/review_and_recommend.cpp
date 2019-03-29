@@ -138,8 +138,11 @@ WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, b
 }
 
 
-std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs) {
+std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs, bool use_rec_pool, std::unordered_set<int> const &rec_pool) {
 	double start_time = omp_get_wtime();
+    if (use_rec_pool) {
+    WordDist** word_dist = collective_closest(source_words, source_words.size(), csr, use_rec_pool, rec_pool);
+    }
     WordDist** word_dist = collective_closest(source_words, source_words.size(), csr);
 	cout << "Algo Time: " << omp_get_wtime() - start_time << endl;
 

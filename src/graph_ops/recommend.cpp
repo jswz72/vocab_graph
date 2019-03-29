@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <unordered_set>
 #include <fstream>
 #include <cstdlib>
 #include "review_and_recommend.h"
@@ -27,6 +28,7 @@ int main(int argc, char **argv) {
 	int num_recs = atoi(argv[3]);
 	const char *source_word_file = argv[4];
 	const char *rec_pool_file = argv[5];
+    bool use_rec_pool = argc == 6;
 	
 	graph<long, long, double, long, long, double> *csr = 
 		new graph <long, long, double, long, long, double>
@@ -38,10 +40,10 @@ int main(int argc, char **argv) {
 	std::vector<int> source_word_idxs;
 	std::vector<string> words = Utils::get_word_mapping(mapping_file);
 
-    std::ifstream infile(source_word_file);
+    std::ifstream source_word_in(source_word_file);
     string source_word;
     int counter = 0;
-    while (std::getline(infile, source_word)) {
+    while (std::getline(source_word_in, source_word)) {
         auto it = std::find(words.begin(), words.end(), source_word);
 		if (it == words.end()) {
 			cout << "Not found in graph: " << source_word << endl;
@@ -53,7 +55,27 @@ int main(int argc, char **argv) {
     }
 	int num_source_words = counter;
 
-	std::vector<WordDist*> closest_words = ReviewAndRec::recommend(csr, source_word_idxs, num_recs);
+    std::vector<WordDist*> closest_words;
+    if (use_rec_pool) {
+        std::unordered_set<int> rec_pool;
+        std::ifstream rec_pool_in(rec_pool_file);
+        string rec_word;
+        int counter = 0;
+        while (std::getline(rec_pool_in, rec_word)) {
+            auto it = std::find(words.begin(), words.end(), rec_word);
+            if (it != words.end()) {
+                int idx = std::distance(words.begin(), it);
+                rec_pool.insert(idx);
+            } else {
+                counter++;
+            }
+        }
+        cout << counter << " recommendation pool words not in graph" << endl;
+        closest_words = ReviewAndRec::recommend(csr, source_word_idxs, num_recs, true, rec_pool);
+    } else {
+        closest_words = ReviewAndRec::recommend(csr, source_word_idxs, num_recs);
+    }
+
 	cout << "\nLearning recommendations :" << endl;
 	for (int i = 0; i < closest_words.size(); i++) {
 		cout << words[closest_words[i]->word_id] << " (Value: "

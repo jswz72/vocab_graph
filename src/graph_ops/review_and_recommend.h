@@ -1,3 +1,4 @@
+#include <unordered_set>
 #include "graph.h"
 #ifndef ReviewAndRec
 #define ReviewAndRec
@@ -16,7 +17,7 @@ typedef graph<long, long, double, long, long, double> CSR;
  * Recommend new words to learn based of their collective closeness
  * to aready known words
  */
-std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs);
+std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs, bool use_rec_pool = false, std::unordered_set<int> const &rec_pool = std::unordered_set<int>());
 
 /**
  * Given list of reviewed words, learned words, graph, and number of words to recommend to review,
