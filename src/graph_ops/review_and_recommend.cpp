@@ -140,10 +140,16 @@ WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, b
 
 std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs, bool use_rec_pool, std::unordered_set<int> const &rec_pool) {
 	double start_time = omp_get_wtime();
+
+    WordDist ** word_dist;
+    int wd_size;
     if (use_rec_pool) {
-    WordDist** word_dist = collective_closest(source_words, source_words.size(), csr, use_rec_pool, rec_pool);
+        word_dist = collective_closest(source_words, source_words.size(), csr, use_rec_pool, rec_pool);
+        wd_size = rec_pool.size();
+    } else {
+        word_dist = collective_closest(source_words, source_words.size(), csr);
+        wd_size = csr->vert_count;
     }
-    WordDist** word_dist = collective_closest(source_words, source_words.size(), csr);
 	cout << "Algo Time: " << omp_get_wtime() - start_time << endl;
 
 	std::vector<WordDist*> related_words;
@@ -152,7 +158,7 @@ std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int n
     double no_relation = (1 / DOUBLE_MAX) * source_words.size();
 	
     // Filter out all dists that are 0 (source word) or not related to any source words
-    std::copy_if(word_dist, word_dist + csr->vert_count, std::back_inserter(related_words), 
+    std::copy_if(word_dist, word_dist + wd_size, std::back_inserter(related_words), 
 			[no_relation] (WordDist *a) -> bool {
                     return a->dist != DOUBLE_INF && a->dist != no_relation;
     });
