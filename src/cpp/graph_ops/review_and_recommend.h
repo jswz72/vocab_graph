@@ -20,12 +20,12 @@ typedef graph<long, long, double, long, long, double> CSR;
  * Optionally takes a recommendation pool - output recommendations will only be given if
  * they are present in this pool
  */
-std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs, bool use_rec_pool = false, std::unordered_set<int> const &rec_pool = std::unordered_set<int>());
+std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, unsigned int num_recs, bool use_rec_pool = false, std::unordered_set<int> const &rec_pool = std::unordered_set<int>());
 
 /**
  * Given list of reviewed words, learned words, graph, and number of words to recommend to review,
  * Return order to review learned words based on collctive closeness
  * to already reviewed words
  */
-std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned, int rec_count);
+std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned, unsigned int rev_count);
 #endif

@@ -147,7 +147,7 @@ WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, b
 }
 
 
-std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int num_recs, bool use_rec_pool, std::unordered_set<int> const &rec_pool) {
+std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, unsigned int num_recs, bool use_rec_pool, std::unordered_set<int> const &rec_pool) {
 	double start_time = omp_get_wtime();
     WordDist ** word_dist;
     int wd_size;
@@ -182,7 +182,7 @@ std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, int n
 	return related_words;
 }
 
-std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned, int rev_count) {
+std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned, unsigned int rev_count) {
 	double start_time = omp_get_wtime();
 	WordDist** word_dist = collective_closest(reviewed, reviewed.size(), csr);
 	std::vector<int> cur_review_set;

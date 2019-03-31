@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 	string weight_file = base_filename + "_weight.bin";
 
 	const char *mapping_file = argv[2];
-	int num_to_review = atoi(argv[3]);
+	unsigned int num_to_review = atoi(argv[3]);
 	
 	graph<long, long, double, long, long, double> *csr = 
 		new graph <long, long, double, long, long, double>

@@ -12,9 +12,9 @@ using std::cout;
 using std::endl;
 
 extern "C" int *recommend(const char *csr_filename, const char **words_in, 
-        int num_words, int *num_recs, const char **source_words,
-        int num_source_words, bool use_rec_pool=false, const char **rec_pool_in=0,
-        int num_rec_pool=0) 
+        unsigned int num_words, unsigned int *num_recs, const char **source_words,
+        unsigned int num_source_words, bool use_rec_pool=false, 
+        const char **rec_pool_in=0, unsigned int num_rec_pool=0) 
 {
     
     string base_filename(csr_filename);
@@ -29,7 +29,7 @@ extern "C" int *recommend(const char *csr_filename, const char **words_in,
 
     std::vector<string> words(words_in, words_in + num_words);
     std::vector<int> source_word_idxs;
-    for (int i = 0; i < num_source_words; i++) {
+    for (unsigned int i = 0; i < num_source_words; i++) {
         string source_word (source_words[i]);
         source_word_idxs.push_back(Utils::find_word(source_word, words));
     }
@@ -37,7 +37,7 @@ extern "C" int *recommend(const char *csr_filename, const char **words_in,
     std::vector<WordDist*> closest_words;
     if (use_rec_pool) {
         std::unordered_set<int> rec_pool;
-        for (int i = 0; i < num_rec_pool; i++) {
+        for (unsigned int i = 0; i < num_rec_pool; i++) {
             string rec_word(rec_pool_in[i]);
             int idx = Utils::find_word(rec_word, words);
             if (idx >= 0)

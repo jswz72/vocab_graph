@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 	string weight_file = base_filename + "_weight.bin";
 
 	const char *mapping_file = argv[2];
-	int num_recs = atoi(argv[3]);
+	unsigned int num_recs = atoi(argv[3]);
 	const char *source_word_file = argv[4];
 	const char *rec_pool_file = argv[5];
     bool use_rec_pool = argc == 6;
