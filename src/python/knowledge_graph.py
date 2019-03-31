@@ -68,6 +68,10 @@ class GraphOps:
 
 
     def review(self, learned_words, num_to_review, reviewed_words=[]):
+        """
+        Return list of words to review (in order) realtive to the given
+        learned words and already reviewed words.
+        """
         csr_fname_t = c_char_p
         words_t = c_char_p * len(self.word_map)
         num_words_t = c_uint
