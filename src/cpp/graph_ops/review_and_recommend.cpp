@@ -62,20 +62,54 @@ double *shortest_path_weights(CSR *csr, int source)
     }
 
     distances[source] = 0;
+    int cur = source;
     for (int count = 0; count < verticies - 1; count++)
     {
-        int cur = min_dist(distances, path, verticies);
+        //int cur = min_dist(distances, path, verticies);
         path[cur] = true;
 
         // Update distances
-        for (int i = csr->beg_pos[cur]; i < csr->beg_pos[cur+1]; i++)
+        double *local_min_dists;
+        int *local_min_idxs;
+#pragma omp parallel
         {
-			int neighbor = csr->csr[i];
-            if (!path[neighbor] && 
-                    distances[cur] != DOUBLE_MAX &&
-                     distances[cur] + csr->weight[i] < distances[neighbor])
+            int threadcount = omp_get_num_threads();
+            int thread_idx = omp_get_thread_num();
+#pragma omp single
             {
-                distances[neighbor] = distances[cur] + csr->weight[i];
+                local_min_idxs = new int[threadcount];
+                local_min_dists = new double[threadcount];
+                for (int i = 0; i < threadcount; i++) {
+                    local_min_dists[i] = DOUBLE_MAX;
+                }
+            }
+#pragma omp for schedule(static)
+            for (int i = csr->beg_pos[cur]; i < csr->beg_pos[cur+1]; i++)
+            {
+                int neighbor = csr->csr[i];
+                if (!path[neighbor] && 
+                        distances[cur] != DOUBLE_MAX &&
+                         distances[cur] + csr->weight[i] < distances[neighbor])
+                {
+                    double dist = distances[cur] + csr->weight[i];
+                    distances[neighbor] = dist;
+                    if (dist < local_min_dists[thread_idx]) {
+                        local_min_dists[thread_idx] = dist;
+                        local_min_idxs[thread_idx] = neighbor;
+                    }
+                }
+            }
+#pragma omp single
+            {
+                double min = local_min_dists[0];
+                int min_idx;
+                for (int i = 1; i < threadcount; i++) {
+                    if (local_min_dists[i] < min) {
+                        min = local_min_dists[i];
+                        min_idx = i;
+                    }
+                }
+                cur = min_idx;
             }
         }
     }
@@ -94,22 +128,21 @@ WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, b
 	WordDist ** word_dist = (WordDist **)malloc(sizeof(WordDist*) * csr->vert_count);
 
     // Fill out dists to all vtxs (dist col) from word (dist row)
+    for (int i = 0; i < n; i++) {
+        int cols = csr->vert_count;
+        double *shortest_paths = shortest_path_weights(csr, source_words[i]);
+        for (int j = 0; j < cols; j++) {
+            dist[i * cols + j] = shortest_paths[j];
+        }
+    }
+
 	#pragma omp parallel 
 	{
-		int threadcount = omp_get_num_threads();
-		#pragma omp single
-		{
-			cout << "Using " << threadcount << " threads" << endl;
-		}
-		#pragma omp for schedule(static)
-		for (int i = 0; i < n; i++) {
-			int cols = csr->vert_count;
-			double *shortest_paths = shortest_path_weights(csr, source_words[i]);
-			for (int j = 0; j < cols; j++) {
-				dist[i * cols + j] = shortest_paths[j];
-			}
-		}
-
+        int threadcount = omp_get_num_threads();
+        #pragma omp single
+        {
+            cout << "Using " << threadcount << " threads" << endl;
+        }
 		// Get collective dist of vtx (col) to all source words (row)
 		#pragma omp for schedule(static)
 		for (int i = 0; i < csr->vert_count; i++) {
