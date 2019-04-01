@@ -67,7 +67,7 @@ class GraphOps:
         return [self.word_map[idx] for idx in ret_ptr[:num_recs_ptr.value]]
 
 
-    def review(self, learned_words, num_to_review, reviewed_words=[]):
+    def review(self, learned_words, num_to_review, reviewed_words=[], num_cycles=1):
         """
         Return list of words to review (in order) realtive to the given
         learned words and already reviewed words.
@@ -80,10 +80,11 @@ class GraphOps:
         reviewed_words_t = c_char_p * len(reviewed_words)
         num_reviewed_words_t = c_uint
         num_to_review_t = c_uint
+        num_cycles_t = c_uint
 
         self.c_review.argtypes = [csr_fname_t, words_t, num_words_t,
                 learned_words_t, num_learned_words_t, reviewed_words_t,
-                num_reviewed_words_t, num_to_review_t]
+                num_reviewed_words_t, num_to_review_t, num_cycles_t]
 
         self.c_review.restype = POINTER(c_int)
 
@@ -96,6 +97,16 @@ class GraphOps:
 
         ret_ptr = self.c_review(self.csr_fname_b, words_arr, len(self.word_map),
                 learned_words_arr, len(learned_words), reviewed_words_arr,
-                len(reviewed_words), num_to_review)
+                len(reviewed_words), num_to_review, num_cycles)
 
-        return [self.word_map[idx] for idx in ret_ptr[:num_to_review]]
+        # todo error handling for num to review above learned size
+
+        rev_matrix = []
+        for cycle in range(num_cycles):
+            row_start = cycle * num_to_review
+            row_end = row_start + num_to_review
+            to_review = [self.word_map[idx] for idx in ret_ptr[row_start:row_end]]
+            rev_matrix.append(to_review)
+
+        return rev_matrix
+

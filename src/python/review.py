@@ -7,6 +7,7 @@ graph = knowledge_graph.GraphOps(edge_list_fname, word_map_fname)
 
 learned = ['flame', 'shark', 'the', 'of']
 reviewed = ['flame']
-res = graph.review(learned, 3, reviewed)
-for word in res:
-    print(word)
+res = graph.review(learned, 2, reviewed, 2)
+
+print("PYTHON: ")
+print(res)
