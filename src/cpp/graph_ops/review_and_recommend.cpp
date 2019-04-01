@@ -200,11 +200,12 @@ std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> 
 			continue;
 		if (is_learned && !is_in_cur_rev)
 			cur_review_set.push_back(cur_id);
-		/*if (cur_review_set.size() == rev_count)
-			break;*/
         if (cur_review_set.size() == learned.size() - reviewed.size())
             break;
 	}
+    // Add reviewed to back, least important
+    for (int r : reviewed)
+        cur_review_set.push_back(r);
 	double final_time = omp_get_wtime() - start_time;
 	cout << "Final Time: " << final_time << endl;
 

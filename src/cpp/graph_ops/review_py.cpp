@@ -3,6 +3,7 @@
 #include <vector>
 #include <unordered_set>
 #include <fstream>
+#include <set>
 #include <sstream>
 #include <cstdlib>
 #include <cmath>
@@ -15,7 +16,7 @@ using std::endl;
 
 struct WordMem {
     double memory = 0.0;  // Current memory of wor
-    unsigned int last_learned;   // how many cycles ago was learned
+    int last_learned = -1;   // how many cycles ago was learned
     unsigned int strength = 0;   // Strength of memory for specific word (how fast memory decays)
     WordMem(int word_id, unsigned int score): word_id(word_id), score(score) {};
     int word_id;    // ID of word in graph
@@ -36,8 +37,8 @@ struct WordMem {
     }
 };
 
-void review_cycle(std::vector<WordMem> &word_mems) {
-    for (int i = 0; i < word_mems.size(); i++) {
+void review_cycle(WordMem *word_mems, int n) {
+    for (int i = 0; i < n; i++) {
         auto wm = &word_mems[i];
         if (!wm->strength)
             continue;
@@ -47,6 +48,7 @@ void review_cycle(std::vector<WordMem> &word_mems) {
 }
 
 void pick_word(WordMem &wm) {
+    wm.memory = 1;
     wm.last_learned = 0;
     wm.strength++;
 }
@@ -82,31 +84,43 @@ extern "C" int *review(const char *csr_filename, const char **words_in,
         reviewed_words_idx.push_back(learned_words_idx[rand() % learned_words_idx.size()]);
     }
 
-	std::vector<int> to_review = ReviewAndRec::review(csr, reviewed_words_idx, learned_words_idx, num_to_review);
+    std::set<int> reviewed_set(reviewed_words_idx.begin(), reviewed_words_idx.end());
+    std::set<int> learned_set(learned_words_idx.begin(), learned_words_idx.end());
 
-    std::vector<WordMem> word_mems;
-    for (int i = 0; i < to_review.size(); i++) {
-        word_mems.push_back(WordMem(to_review[i], i));
-    }
-
-    
-    int cols = num_to_review;
+    WordMem *word_mems = (WordMem*)malloc(sizeof(WordMem) * num_learned_words);
+    // Words to review in order of relatedness to already-reviewed words
+	std::vector<int> to_review(num_learned_words);
     // Review recommendation matrix, each row is review cycle
-    int *review_recs = (int *)malloc(sizeof(int) * cols * num_cycles);
+    int *review_recs = (int *)malloc(sizeof(int) * num_to_review * num_cycles);
 
     for (int cycle = 0; cycle < num_cycles; cycle++) {
         cout << "Cycle " << cycle << " review recs: " << endl;
-        for (int i = 0; i < cols; i++) {
-            pick_word(word_mems[i]);
-            review_recs[cycle * cols + i] = word_mems[i].word_id;
-            
+        // If all learned words aren't in reviewed set
+        if (!std::includes(reviewed_set.begin(), reviewed_set.end(), learned_set.begin(), learned_set.end())) {
+            cout << "Doing collec closest computation" << endl;
+            to_review = ReviewAndRec::review(csr, reviewed_words_idx, learned_words_idx, num_to_review);
+            for (int i = 0; i < to_review.size(); i++) {
+               word_mems[i] = WordMem(to_review[i], i); 
+            }
+        }
+        // Take words to review this cycle
+        for (int i = 0; i < num_to_review; i++) {
             // Debug
             cout << word_mems[i].to_string() << endl;
+
+            pick_word(word_mems[i]);
+            review_recs[cycle * num_to_review + i] = word_mems[i].word_id;
+            // Add to reviewed set if not there
+            if (reviewed_set.find(word_mems[i].word_id) == reviewed_set.end()) {
+                reviewed_set.insert(word_mems[i].word_id);
+                reviewed_words_idx.push_back(word_mems[i].word_id);
+            }
         }
         cout << endl;
-        review_cycle(word_mems);
+        // Increment memory
+        review_cycle(word_mems, num_learned_words);
         // Sort words have worst memory of
-        std::sort(word_mems.begin(), word_mems.end());
+        std::sort(word_mems, word_mems + num_learned_words);
     }
 
     return review_recs;
