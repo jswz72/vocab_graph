@@ -1,6 +1,13 @@
 from ctypes import cdll, POINTER, c_char_p, c_int, c_uint, byref
+import os
 
-class GraphOps:
+_REC_LIB = 'recommend.so'
+_REVIEW_LIB = 'review.so'
+_DIR = os.path.dirname(os.path.abspath(__file__))
+_REC_FP = os.path.join(_DIR, _REC_LIB)
+_REV_FP = os.path.join(_DIR, _REVIEW_LIB)
+
+class VocabGraph:
     """
     Operations to be done on the knowledge graph defined by the given filenames
     Init Args:
@@ -12,8 +19,8 @@ class GraphOps:
     """
     def __init__(self, csr_base_filename, word_map_filename):
         self.csr_fname_b = bytes(csr_base_filename, 'utf-8')
-        self.c_recommend = cdll.LoadLibrary('./recommend.dll').recommend
-        self.c_review = cdll.LoadLibrary('./review.dll').review
+        self.c_recommend = cdll.LoadLibrary(_REC_FP).recommend
+        self.c_review = cdll.LoadLibrary(_REV_FP).review
         self._get_word_mapping(word_map_filename)
 
 
@@ -23,6 +30,12 @@ class GraphOps:
             lines = f.readlines()
         self.word_map = [line.strip() for line in lines]
         self.word_map_b = [bytes(word, 'utf-8') for word in self.word_map]
+
+
+    def _check_words(self, words):
+        for word in words:
+            if word not in self.word_map:
+                raise Exception('Given word not found in graph: {}'.format(word))
 
 
     def recommend(self, source_words, num_recs, rec_pool=[]):
@@ -36,6 +49,7 @@ class GraphOps:
         Optional rec_pool: if given, recommendtions will only be made from
         words present in this recommendation pool list
         """
+        self._check_words(source_words)
         csr_fname_t = c_char_p
         words_t = c_char_p * len(self.word_map)
         num_words_t = c_uint
@@ -72,6 +86,8 @@ class GraphOps:
         Return list of words to review (in order) realtive to the given
         learned words and already reviewed words.
         """
+        self._check_words(learned_words)
+        self._check_words(reviewed_words)
         csr_fname_t = c_char_p
         words_t = c_char_p * len(self.word_map)
         num_words_t = c_uint
