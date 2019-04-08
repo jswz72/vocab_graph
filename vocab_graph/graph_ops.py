@@ -1,11 +1,13 @@
-from ctypes import cdll, POINTER, c_char_p, c_int, c_uint, byref
+from ctypes import cdll, POINTER, c_char_p, c_int, c_double, c_uint, byref
 import os
 
+_EDGE_LIB = 'get_edges.so'
 _REC_LIB = 'recommend.so'
 _REVIEW_LIB = 'review.so'
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _REC_FP = os.path.join(_DIR, _REC_LIB)
 _REV_FP = os.path.join(_DIR, _REVIEW_LIB)
+_EDGE_FP = os.path.join(_DIR, _EDGE_LIB)
 
 class VocabGraph:
     """
@@ -18,7 +20,7 @@ class VocabGraph:
         ordered by their index
     """
     def __init__(self, csr_base_filename, word_map_filename):
-        self.csr_fname_b = bytes(csr_base_filename, 'utf-8')
+        self.csr_fname_b = _to_bytes(csr_base_filename)
         self.c_recommend = cdll.LoadLibrary(_REC_FP).recommend
         self.c_review = cdll.LoadLibrary(_REV_FP).review
         self._get_word_mapping(word_map_filename)
@@ -29,7 +31,7 @@ class VocabGraph:
         with open(fname) as f:
             lines = f.readlines()
         self.word_map = [line.strip() for line in lines]
-        self.word_map_b = [bytes(word, 'utf-8') for word in self.word_map]
+        self.word_map_b = [_to_bytes(word) for word in self.word_map]
 
 
     def _check_words(self, words):
@@ -70,9 +72,9 @@ class VocabGraph:
         words_arr = (c_char_p * len(self.word_map))()
         words_arr[:] = self.word_map_b
         source_words_arr = (c_char_p * len(source_words))()
-        source_words_arr[:] = [bytes(word, 'utf-8') for word in source_words]
+        source_words_arr[:] = [_to_bytes(word) for word in source_words]
         rec_pool_arr = (c_char_p * len(rec_pool))()
-        rec_pool_arr[:] = [bytes(word, 'utf-8') for word in rec_pool]
+        rec_pool_arr[:] = [_to_bytes(word) for word in rec_pool]
 
         ret_ptr = self.c_recommend(self.csr_fname_b, words_arr, len(self.word_map),
                 byref(num_recs_ptr), source_words_arr, len(source_words),
@@ -106,12 +108,52 @@ class VocabGraph:
         words_arr = (c_char_p * len(self.word_map))()
         words_arr[:] = self.word_map_b
         learned_words_arr = (c_char_p * len(learned_words))()
-        learned_words_arr[:] = [bytes(word, 'utf-8') for word in learned_words]
+        learned_words_arr[:] = [_to_bytes(word) for word in learned_words]
         reviewed_words_arr = (c_char_p * len(reviewed_words))()
-        reviewed_words_arr[:] = [bytes(word, 'utf-8') for word in reviewed_words]
+        reviewed_words_arr[:] = [_to_bytes(word) for word in reviewed_words]
 
         ret_ptr = self.c_review(self.csr_fname_b, words_arr, len(self.word_map),
                 learned_words_arr, len(learned_words), reviewed_words_arr,
                 len(reviewed_words), num_to_review)
 
         return [self.word_map[idx] for idx in ret_ptr[:num_to_review]]
+
+
+_to_bytes = lambda word: bytes(word, 'utf-8')
+
+
+def get_edge_list(vecfilename, edge_file_out, threshold=0, limit=0, to_nums=False, 
+        word_file_out=None):
+    """
+    Write an edge list file given the filename of a vectorfile, and output edgefile.
+
+        Optionally provide unsigned values threshold and limit.
+
+        Optionally provide to_nums to translate produced edge-list into numerical/index form.
+        If doing so, must provide word_file_out to write word indices to
+
+        All filenames must be absolute paths
+    """
+    if to_nums and not word_file_out:
+        raise ValueError("Must give word_file_out if to_nums is True")
+
+    c_get_edge_list = cdll.LoadLibrary(_EDGE_FP).get_edge_list
+
+    vecfilename_t = c_char_p
+    edge_file_out_t = c_char_p
+    threshold_t = c_double
+    limit_t = c_uint
+    to_nums_t = c_uint
+    word_file_out_t = c_char_p
+
+    c_get_edge_list.argtypes = [vecfilename_t, edge_file_out_t, threshold_t, limit_t, to_nums_t, 
+            word_file_out_t]
+
+    vecfilename_b = _to_bytes(vecfilename)
+    edge_file_out_b= _to_bytes(edge_file_out)
+    word_file_out_b= _to_bytes(word_file_out)
+
+    c_get_edge_list(vecfilename_b, edge_file_out_b, threshold, limit, to_nums, word_file_out_b)
+
+
+
