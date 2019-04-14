@@ -88,36 +88,43 @@ class VocabGraph:
         Return list of words to review (in order) realtive to the given
         learned words and already reviewed words.
         """
-        self._check_words(learned_words)
+        self._check_words([wm.word for wm in learned_words])
         self._check_words(reviewed_words)
         csr_fname_t = c_char_p
         words_t = c_char_p * len(self.word_map)
         num_words_t = c_uint
         learned_words_t = c_char_p * len(learned_words)
         num_learned_words_t = c_uint
+        t_params_t = POINTER(c_int)
+        s_params_t = POINTER(c_double)
         reviewed_words_t = c_char_p * len(reviewed_words)
         num_reviewed_words_t = c_uint
 
-        #TODO UPDATE ARGS
         self.c_review.argtypes = [csr_fname_t, words_t, num_words_t,
-                learned_words_t, num_learned_words_t, reviewed_words_t,
-                num_reviewed_words_t ]
+                learned_words_t, num_learned_words_t, t_params_t, s_params_t,
+                reviewed_words_t, num_reviewed_words_t]
 
         self.c_review.restype = POINTER(CWordMem)
 
         words_arr = (c_char_p * len(self.word_map))()
         words_arr[:] = self.word_map_b
         learned_words_arr = (c_char_p * len(learned_words))()
-        learned_words_arr[:] = [_to_bytes(word) for word in learned_words]
+        learned_words_arr[:] = [_to_bytes(wm.word) for wm in learned_words]
+        t_params_arr = (c_int * len(learned_words))()
+        t_params_arr[:] = [wm.last_learned for wm in learned_words]
+        s_params_arr = (c_double * len(learned_words))()
+        s_params_arr[:] = [wm.strength for wm in learned_words]
+
         reviewed_words_arr = (c_char_p * len(reviewed_words))()
         reviewed_words_arr[:] = [_to_bytes(word) for word in reviewed_words]
 
         ret_ptr = self.c_review(self.csr_fname_b, words_arr, len(self.word_map),
-                learned_words_arr, len(learned_words), reviewed_words_arr,
-                len(reviewed_words))
+                learned_words_arr, len(learned_words), t_params_arr, s_params_arr,
+                reviewed_words_arr, len(reviewed_words))
 
+        #to_review = []
         return [WordMem(self.word_map[wm.word_id], wm.last_learned, wm.strength, wm.memory)
-                for wm in ret_ptr[:len(learned_words)]]
+            for wm in ret_ptr[:len(learned_words)]]
 
 
 _to_bytes = lambda word: bytes(word, 'utf-8')
@@ -128,11 +135,15 @@ class CWordMem(Structure):
             ("last_learned", c_int), ("strength", c_uint)]
 
 class WordMem:
-    def __init__(word_id, last_learned, strength, memory=0):
-        self.word_id = word_id
+    def __init__(self, word, last_learned, strength, memory=0):
+        self.word = word
         self.last_learned = last_learned
         self.strength = strength
         self.memory = memory
+
+    def __str__(self):
+        return "Word: {}, memory: {}, strength: {}, last learned: {}".format(self.word,
+                self.memory, self.strength, self.last_learned)
 
 
 def get_edge_list(vecfilename, edge_file_out, threshold=0, limit=0, to_nums=False,

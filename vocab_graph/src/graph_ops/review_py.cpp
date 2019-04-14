@@ -7,6 +7,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <cmath>
+#include <ctime>
 #include "review_and_recommend.h"
 #include "utils.h"
 
@@ -67,6 +68,7 @@ extern "C" WordMem *review(const char *csr_filename, const char **words_in,
         string rw(reviewed_words_in[i]);
         reviewed_words_idx.push_back(Utils::find_word(rw, words));
     }
+    srand(time(NULL));
     
     // Take random from learned if not given any reviewed
     if (!num_reviewed_words) {
@@ -81,16 +83,18 @@ extern "C" WordMem *review(const char *csr_filename, const char **words_in,
 
     for (int i = 0 ; i < learned_words_idx.size() - reviewed_words_idx.size(); i++) {
         int word_id = to_review[i];
-        word_mems[i] = WordMem(word_id, t_params[word_id], s_params[word_id]);
+        auto idx = distance(learned_words_idx.begin(), 
+                find(learned_words_idx.begin(), learned_words_idx.end(), word_id));
+        word_mems[i] = WordMem(word_id, t_params[idx], s_params[idx]);
     }
     // Add reviewed words to back
     int start = learned_words_idx.size() - reviewed_words_idx.size();
     for (int i = 0; i < reviewed_words_idx.size(); i++) {
         int word_id = reviewed_words_idx[i];
-        word_mems[start + i] = WordMem(word_id, t_params[word_id], s_params[word_id]);
+        auto idx = distance(learned_words_idx.begin(), 
+                find(learned_words_idx.begin(), learned_words_idx.end(), word_id));
+        word_mems[start + i] = WordMem(word_id, t_params[idx], s_params[idx]);
     }
-    for (int i = 0; i < num_learned_words; i++)
-        cout << word_mems[i].to_string() << endl;
     memory_cycle(word_mems, num_learned_words);
 
     return word_mems;
