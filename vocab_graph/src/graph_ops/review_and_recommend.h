@@ -27,5 +27,5 @@ std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, unsig
  * Return order to review learned words based on collctive closeness
  * to already reviewed words
  */
-std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned, unsigned int rev_count);
+std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned);
 #endif
