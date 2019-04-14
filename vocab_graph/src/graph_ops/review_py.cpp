@@ -79,16 +79,19 @@ extern "C" WordMem *review(const char *csr_filename, const char **words_in,
 	std::vector<int> to_review = ReviewAndRec::review(csr, reviewed_words_idx, 
             learned_words_idx);
 
-    /*for (int i = 0 ; i < learned_words_idx.size() - reviewed_words_idx.size(); i++) {
+    for (int i = 0 ; i < learned_words_idx.size() - reviewed_words_idx.size(); i++) {
         int word_id = to_review[i];
         word_mems[i] = WordMem(word_id, t_params[word_id], s_params[word_id]);
     }
     // Add reviewed words to back
+    int start = learned_words_idx.size() - reviewed_words_idx.size();
     for (int i = 0; i < reviewed_words_idx.size(); i++) {
         int word_id = reviewed_words_idx[i];
-        word_mems[i] = WordMem(word_id, t_params[word_id], s_params[word_id]);
+        word_mems[start + i] = WordMem(word_id, t_params[word_id], s_params[word_id]);
     }
-    memory_cycle(word_mems, num_learned_words);*/
+    for (int i = 0; i < num_learned_words; i++)
+        cout << word_mems[i].to_string() << endl;
+    memory_cycle(word_mems, num_learned_words);
 
     return word_mems;
 }
