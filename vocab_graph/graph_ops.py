@@ -1,4 +1,4 @@
-from ctypes import cdll, POINTER, c_char_p, c_int, c_double, c_uint, byref
+from ctypes import cdll, POINTER, c_char_p, c_int, c_double, c_uint, byref, Structure
 import os
 
 _EDGE_LIB = 'get_edges.so'
@@ -10,14 +10,12 @@ _REV_FP = os.path.join(_DIR, _REVIEW_LIB)
 _EDGE_FP = os.path.join(_DIR, _EDGE_LIB)
 
 class VocabGraph:
-    """
-    Operations to be done on the knowledge graph defined by the given filenames
-    Init Args:
-        csr_base_filename: Base filename of the binary beg_pos, csr, and weight
-        graph files
+    """ Operations to be done on the knowledge graph defined by the given filenames
+    csr_base_filename: Base filename of the binary beg_pos, csr, and weight
+    graph files
 
-        word_map_filename: Filename of the text file of words in the graph,
-        ordered by their index
+    word_map_filename: Filename of the text file of words in the graph,
+    ordered by their index
     """
     def __init__(self, csr_base_filename, word_map_filename):
         self.csr_fname_b = _to_bytes(csr_base_filename)
@@ -83,56 +81,95 @@ class VocabGraph:
         return [self.word_map[idx] for idx in ret_ptr[:num_recs_ptr.value]]
 
 
-    def review(self, learned_words, num_to_review, reviewed_words=[]):
+    def review(self, learned_words, reviewed_words=[]):
         """
         Return list of words to review (in order) realtive to the given
         learned words and already reviewed words.
+
+        learned_words: List of WordMems representing all learned words
+
+        reviewed_words: Optional list of word strings, representing which words have been reviewed
+        Returned words will be ordered in terms of collective closest to these words
+
+        Will return list of WordMems, includes given parameters and a calculated memory for each word
         """
-        self._check_words(learned_words)
+        self._check_words([wm.word for wm in learned_words])
         self._check_words(reviewed_words)
         csr_fname_t = c_char_p
         words_t = c_char_p * len(self.word_map)
         num_words_t = c_uint
         learned_words_t = c_char_p * len(learned_words)
         num_learned_words_t = c_uint
+        t_params_t = POINTER(c_int)
+        s_params_t = POINTER(c_double)
         reviewed_words_t = c_char_p * len(reviewed_words)
         num_reviewed_words_t = c_uint
-        num_to_review_t = c_uint
 
         self.c_review.argtypes = [csr_fname_t, words_t, num_words_t,
-                learned_words_t, num_learned_words_t, reviewed_words_t,
-                num_reviewed_words_t, num_to_review_t]
+                learned_words_t, num_learned_words_t, t_params_t, s_params_t,
+                reviewed_words_t, num_reviewed_words_t]
 
-        self.c_review.restype = POINTER(c_int)
+        self.c_review.restype = POINTER(CWordMem)
 
         words_arr = (c_char_p * len(self.word_map))()
         words_arr[:] = self.word_map_b
         learned_words_arr = (c_char_p * len(learned_words))()
-        learned_words_arr[:] = [_to_bytes(word) for word in learned_words]
+        learned_words_arr[:] = [_to_bytes(wm.word) for wm in learned_words]
+        t_params_arr = (c_int * len(learned_words))()
+        t_params_arr[:] = [wm.last_learned for wm in learned_words]
+        s_params_arr = (c_double * len(learned_words))()
+        s_params_arr[:] = [wm.strength for wm in learned_words]
+
         reviewed_words_arr = (c_char_p * len(reviewed_words))()
         reviewed_words_arr[:] = [_to_bytes(word) for word in reviewed_words]
 
         ret_ptr = self.c_review(self.csr_fname_b, words_arr, len(self.word_map),
-                learned_words_arr, len(learned_words), reviewed_words_arr,
-                len(reviewed_words), num_to_review)
+                learned_words_arr, len(learned_words), t_params_arr, s_params_arr,
+                reviewed_words_arr, len(reviewed_words))
 
-        return [self.word_map[idx] for idx in ret_ptr[:num_to_review]]
+        return [WordMem(self.word_map[wm.word_id], wm.last_learned, wm.strength, wm.memory)
+            for wm in ret_ptr[:len(learned_words)]]
 
 
 _to_bytes = lambda word: bytes(word, 'utf-8')
 
 
-def get_edge_list(vecfilename, edge_file_out, threshold=0, limit=0, to_nums=False, 
-        word_file_out=None):
+class CWordMem(Structure):
+    """ C Struct of word memories """
+    _fields_ = [("word_id", c_int), ("memory", c_double),
+            ("last_learned", c_int), ("strength", c_uint)]
+
+class WordMem:
+    """ Class holding memory/forgetting information of word
+    word: word string
+
+    last_learned: how many time units ago was learned (positive number)
+
+    strength: how quickly memory of this word decays
+
+    memory: resulting memory of the word given the above parametrs (initialized to zero)
     """
-    Write an edge list file given the filename of a vectorfile, and output edgefile.
+    def __init__(self, word, last_learned, strength, memory=0):
+        self.word = word
+        self.last_learned = last_learned
+        self.strength = strength
+        self.memory = memory
 
-        Optionally provide unsigned values threshold and limit.
+    def __str__(self):
+        return "Word: {}, memory: {}, strength: {}, last learned: {}".format(self.word,
+                self.memory, self.strength, self.last_learned)
 
-        Optionally provide to_nums to translate produced edge-list into numerical/index form.
-        If doing so, must provide word_file_out to write word indices to
 
-        All filenames must be absolute paths
+def get_edge_list(vecfilename, edge_file_out, threshold=0, limit=0, to_nums=False,
+        word_file_out=None):
+    """ Write an edge list file given the filename of a vectorfile, and output edgefile.
+
+    Optionally provide unsigned values threshold and limit.
+
+    Optionally provide to_nums to translate produced edge-list into numerical/index form.
+    If doing so, must provide word_file_out to write word indices to
+
+    All filenames must be absolute paths
     """
     if to_nums and not word_file_out:
         raise ValueError("Must give word_file_out if to_nums is True")
@@ -146,7 +183,7 @@ def get_edge_list(vecfilename, edge_file_out, threshold=0, limit=0, to_nums=Fals
     to_nums_t = c_uint
     word_file_out_t = c_char_p
 
-    c_get_edge_list.argtypes = [vecfilename_t, edge_file_out_t, threshold_t, limit_t, to_nums_t, 
+    c_get_edge_list.argtypes = [vecfilename_t, edge_file_out_t, threshold_t, limit_t, to_nums_t,
             word_file_out_t]
 
     vecfilename_b = _to_bytes(vecfilename)
