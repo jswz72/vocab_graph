@@ -85,6 +85,13 @@ class VocabGraph:
         """
         Return list of words to review (in order) realtive to the given
         learned words and already reviewed words.
+
+        learned_words: List of WordMems representing all learned words
+
+        reviewed_words: Optional list of word strings, representing which words have been reviewed
+        Returned words will be ordered in terms of collective closest to these words
+
+        Will return list of WordMems, includes given parameters and a calculated memory for each word
         """
         self._check_words([wm.word for wm in learned_words])
         self._check_words(reviewed_words)
