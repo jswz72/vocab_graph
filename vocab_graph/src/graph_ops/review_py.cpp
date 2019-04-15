@@ -18,13 +18,14 @@ using std::endl;
 
 struct WordMem {
     int word_id;    // ID of word in graph
-    double memory = 0.0;  // Current memory of wor
+    double memory = 0.0;  // Current memory of word
     int last_learned = -1;   // How many time units ago was learned
     unsigned int strength = 0;   // Strength of memory for specific word (how fast memory decays)
 
     WordMem(int word_id, int last_learned, unsigned int strength): word_id(word_id), 
         last_learned(last_learned), strength(strength) {};
 
+    // For debug
     std::string to_string() {
         std::stringstream ss;
         ss << "ID: " << word_id << " Mem: " << memory << " Last learned: " << last_learned
@@ -33,7 +34,7 @@ struct WordMem {
     }
 };
 
-// Calculate memory/forgetfullness for each word
+// Calculate memory/forgetfullness for each word via forgetting curve exponential
 void memory_cycle(WordMem *word_mems, int n) {
     for (int i = 0; i < n; i++) {
         auto wm = &word_mems[i];

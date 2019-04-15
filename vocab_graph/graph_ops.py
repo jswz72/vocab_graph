@@ -10,14 +10,12 @@ _REV_FP = os.path.join(_DIR, _REVIEW_LIB)
 _EDGE_FP = os.path.join(_DIR, _EDGE_LIB)
 
 class VocabGraph:
-    """
-    Operations to be done on the knowledge graph defined by the given filenames
-    Init Args:
-        csr_base_filename: Base filename of the binary beg_pos, csr, and weight
-        graph files
+    """ Operations to be done on the knowledge graph defined by the given filenames
+    csr_base_filename: Base filename of the binary beg_pos, csr, and weight
+    graph files
 
-        word_map_filename: Filename of the text file of words in the graph,
-        ordered by their index
+    word_map_filename: Filename of the text file of words in the graph,
+    ordered by their index
     """
     def __init__(self, csr_base_filename, word_map_filename):
         self.csr_fname_b = _to_bytes(csr_base_filename)
@@ -122,7 +120,6 @@ class VocabGraph:
                 learned_words_arr, len(learned_words), t_params_arr, s_params_arr,
                 reviewed_words_arr, len(reviewed_words))
 
-        #to_review = []
         return [WordMem(self.word_map[wm.word_id], wm.last_learned, wm.strength, wm.memory)
             for wm in ret_ptr[:len(learned_words)]]
 
@@ -131,10 +128,20 @@ _to_bytes = lambda word: bytes(word, 'utf-8')
 
 
 class CWordMem(Structure):
+    """ C Struct of word memories """
     _fields_ = [("word_id", c_int), ("memory", c_double),
             ("last_learned", c_int), ("strength", c_uint)]
 
 class WordMem:
+    """ Class holding memory/forgetting information of word
+    word: word string
+
+    last_learned: how many time units ago was learned (positive number)
+
+    strength: how quickly memory of this word decays
+
+    memory: resulting memory of the word given the above parametrs (initialized to zero)
+    """
     def __init__(self, word, last_learned, strength, memory=0):
         self.word = word
         self.last_learned = last_learned
@@ -148,15 +155,14 @@ class WordMem:
 
 def get_edge_list(vecfilename, edge_file_out, threshold=0, limit=0, to_nums=False,
         word_file_out=None):
-    """
-    Write an edge list file given the filename of a vectorfile, and output edgefile.
+    """ Write an edge list file given the filename of a vectorfile, and output edgefile.
 
-        Optionally provide unsigned values threshold and limit.
+    Optionally provide unsigned values threshold and limit.
 
-        Optionally provide to_nums to translate produced edge-list into numerical/index form.
-        If doing so, must provide word_file_out to write word indices to
+    Optionally provide to_nums to translate produced edge-list into numerical/index form.
+    If doing so, must provide word_file_out to write word indices to
 
-        All filenames must be absolute paths
+    All filenames must be absolute paths
     """
     if to_nums and not word_file_out:
         raise ValueError("Must give word_file_out if to_nums is True")
