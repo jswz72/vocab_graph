@@ -15,7 +15,7 @@ for word in res:
 
 print('GROUP RECOMMENDATION: ')
 groups = ['the', 'of', 'other', 'learn'], ['whale', 'torch', 'as'], ['flame', 'shark']
-idx = graph.recommend_group(source_words, groups)
-print(groups[idx])
+group = graph.recommend_group(source_words, groups)
+print(group)
 
 

@@ -82,6 +82,11 @@ class VocabGraph:
 
 
     def recommend_group(self, source_words, rec_groups):
+        """
+        Recommend group of words, based on their collective closensess to source words.
+
+        rec_groups: List of lists of words of arbitrary lengths
+        """
         total_group_len = sum([len(g) for g in rec_groups])
         num_groups = len(rec_groups)
 
@@ -107,8 +112,9 @@ class VocabGraph:
         for i in range(1, num_groups + 1):
             group_sizes[i] = group_sizes[i - 1] + len(rec_groups[i - 1])
 
-        return self.c_recommend_group(self.csr_fname_b, source_words_arr, len(source_words),
+        idx = self.c_recommend_group(self.csr_fname_b, source_words_arr, len(source_words),
                 groups, len(rec_groups), group_sizes)
+        return rec_groups[idx]
 
 
     def review(self, learned_words, reviewed_words=[]):
