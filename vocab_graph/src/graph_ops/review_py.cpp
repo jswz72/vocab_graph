@@ -42,10 +42,9 @@ void memory_cycle(WordMem *word_mems, int n) {
     }
 }
 
-extern "C" WordMem *review(const char *csr_filename, const char **words_in, 
-        unsigned int num_words, const char **learned_words_in, 
+extern "C" WordMem *review(const char *csr_filename, int *learned_words_in, 
         unsigned int num_learned_words, int *t_params, double *s_params, 
-        char **reviewed_words_in, unsigned int num_reviewed_words)
+        int *reviewed_words_in, unsigned int num_reviewed_words)
 {
     string base_filename (csr_filename);
 	string beg_file = base_filename + "_beg_pos.bin";
@@ -56,21 +55,13 @@ extern "C" WordMem *review(const char *csr_filename, const char **words_in,
 		new graph <long, long, double, long, long, double>
 		(beg_file.c_str(), csr_file.c_str(), weight_file.c_str());
 
-    std::vector<string> words(words_in, words_in + num_words);
+    std::vector<int> learned_words_idx(learned_words_in, 
+            learned_words_in + num_learned_words);
 
-    std::vector<int> learned_words_idx;
-    for (int i = 0; i < num_learned_words; i++) {
-        string lw(learned_words_in[i]);
-        learned_words_idx.push_back(Utils::find_word(lw, words));
-    }
+    std::vector<int> reviewed_words_idx(reviewed_words_in, 
+            reviewed_words_in + num_reviewed_words);
 
-    std::vector<int> reviewed_words_idx;
-    for (int i = 0; i < num_reviewed_words; i++) {
-        string rw(reviewed_words_in[i]);
-        reviewed_words_idx.push_back(Utils::find_word(rw, words));
-    }
     srand(time(NULL));
-    
     // Take random from learned if not given any reviewed
     if (!num_reviewed_words) {
         reviewed_words_idx.push_back(learned_words_idx[rand() 

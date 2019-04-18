@@ -2,8 +2,8 @@ from vocab_graph import graph_ops
 WordMem = graph_ops.WordMem
 
 # Location of test files made in this project
-edge_list_fname = 'vocab_graph/src/get_edges/edge-list.txt'
-word_map_fname = 'vocab_graph/src/get_edges/word-order.txt'
+edge_list_fname = './data/edge-list.txt'
+word_map_fname = './data/word-order.txt'
 forgotten_threshold = 0.14
 
 graph = graph_ops.VocabGraph(edge_list_fname, word_map_fname)

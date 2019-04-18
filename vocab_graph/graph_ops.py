@@ -32,10 +32,15 @@ class VocabGraph:
         self.word_map_b = [_to_bytes(word) for word in self.word_map]
 
 
-    def _check_words(self, words):
-        for word in words:
-            if word not in self.word_map:
-                raise Exception('Given word not found in graph: {}'.format(word))
+    def _get_idx(self, word):
+        idx = None
+        for i, wmword in enumerate(self.word_map):
+            if word == wmword:
+                idx = i
+        if idx is None:
+            raise Exception('Given word not found in graph: {}'.format(word))
+        return idx
+
 
 
     def recommend(self, source_words, num_recs, rec_pool=[]):
@@ -49,34 +54,28 @@ class VocabGraph:
         Optional rec_pool: if given, recommendtions will only be made from
         words present in this recommendation pool list
         """
-        self._check_words(source_words)
         csr_fname_t = c_char_p
-        words_t = c_char_p * len(self.word_map)
-        num_words_t = c_uint
         num_recs_t = POINTER(c_uint)
-        source_words_t = c_char_p * len(source_words)
+        source_words_t = POINTER(c_int)
         num_source_words_t = c_uint
         use_rec_pool_t = c_uint
-        rec_pool_t = c_char_p * len(rec_pool)
+        rec_pool_t = POINTER(c_int)
         num_rec_pool_t = c_uint
 
-        self.c_recommend.argtypes = [csr_fname_t, words_t, num_words_t, num_recs_t,
-                source_words_t, num_source_words_t, use_rec_pool_t,
-                rec_pool_t, num_rec_pool_t]
+        self.c_recommend.argtypes = [csr_fname_t, num_recs_t, source_words_t,
+                num_source_words_t, use_rec_pool_t, rec_pool_t, num_rec_pool_t]
 
         self.c_recommend.restype = POINTER(c_int)
 
         num_recs_ptr = c_uint(num_recs)
-        words_arr = (c_char_p * len(self.word_map))()
-        words_arr[:] = self.word_map_b
-        source_words_arr = (c_char_p * len(source_words))()
-        source_words_arr[:] = [_to_bytes(word) for word in source_words]
-        rec_pool_arr = (c_char_p * len(rec_pool))()
-        rec_pool_arr[:] = [_to_bytes(word) for word in rec_pool]
+        source_words_arr = (c_int * len(source_words))()
+        source_words_arr[:] = [self._get_idx(word) for word in source_words]
+        rec_pool_arr = (c_int * len(rec_pool))()
+        rec_pool_arr[:] = [self._get_idx(word) for word in rec_pool]
 
-        ret_ptr = self.c_recommend(self.csr_fname_b, words_arr, len(self.word_map),
-                byref(num_recs_ptr), source_words_arr, len(source_words),
-                bool(rec_pool), rec_pool_arr, len(rec_pool))
+        ret_ptr = self.c_recommend(self.csr_fname_b, byref(num_recs_ptr),
+                source_words_arr, len(source_words), bool(rec_pool),
+                rec_pool_arr, len(rec_pool))
 
         return [self.word_map[idx] for idx in ret_ptr[:num_recs_ptr.value]]
 
@@ -93,39 +92,34 @@ class VocabGraph:
 
         Will return list of WordMems, includes given parameters and a calculated memory for each word
         """
-        self._check_words([wm.word for wm in learned_words])
-        self._check_words(reviewed_words)
+        #self._check_words([wm.word for wm in learned_words])
+        #self._check_words(reviewed_words)
         csr_fname_t = c_char_p
-        words_t = c_char_p * len(self.word_map)
-        num_words_t = c_uint
-        learned_words_t = c_char_p * len(learned_words)
+        learned_words_t = POINTER(c_int)
         num_learned_words_t = c_uint
         t_params_t = POINTER(c_int)
         s_params_t = POINTER(c_double)
-        reviewed_words_t = c_char_p * len(reviewed_words)
+        reviewed_words_t = POINTER(c_int)
         num_reviewed_words_t = c_uint
 
-        self.c_review.argtypes = [csr_fname_t, words_t, num_words_t,
-                learned_words_t, num_learned_words_t, t_params_t, s_params_t,
+        self.c_review.argtypes = [csr_fname_t, learned_words_t,
+                num_learned_words_t, t_params_t, s_params_t,
                 reviewed_words_t, num_reviewed_words_t]
 
         self.c_review.restype = POINTER(CWordMem)
 
-        words_arr = (c_char_p * len(self.word_map))()
-        words_arr[:] = self.word_map_b
-        learned_words_arr = (c_char_p * len(learned_words))()
-        learned_words_arr[:] = [_to_bytes(wm.word) for wm in learned_words]
+        learned_words_arr = (c_int * len(learned_words))()
+        learned_words_arr[:] = [self._get_idx(wm.word) for wm in learned_words]
         t_params_arr = (c_int * len(learned_words))()
         t_params_arr[:] = [wm.last_learned for wm in learned_words]
         s_params_arr = (c_double * len(learned_words))()
         s_params_arr[:] = [wm.strength for wm in learned_words]
 
-        reviewed_words_arr = (c_char_p * len(reviewed_words))()
-        reviewed_words_arr[:] = [_to_bytes(word) for word in reviewed_words]
+        reviewed_words_arr = (c_int * len(reviewed_words))()
+        reviewed_words_arr[:] = [self._get_idx(word) for word in reviewed_words]
 
-        ret_ptr = self.c_review(self.csr_fname_b, words_arr, len(self.word_map),
-                learned_words_arr, len(learned_words), t_params_arr, s_params_arr,
-                reviewed_words_arr, len(reviewed_words))
+        ret_ptr = self.c_review(self.csr_fname_b, learned_words_arr, len(learned_words),
+                t_params_arr, s_params_arr, reviewed_words_arr, len(reviewed_words))
 
         return [WordMem(self.word_map[wm.word_id], wm.last_learned, wm.strength, wm.memory)
             for wm in ret_ptr[:len(learned_words)]]
