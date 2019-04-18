@@ -22,6 +22,9 @@ typedef graph<long, long, double, long, long, double> CSR;
  */
 std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, unsigned int num_recs, bool use_rec_pool = false, std::unordered_set<int> const &rec_pool = std::unordered_set<int>());
 
+
+int recommend_group(CSR *csr, std::vector<int> &source_words, std::vector<std::unordered_set<int> > &groups);
+
 /**
  * Given list of reviewed words, learned words, graph, and number of words to recommend to review,
  * Return order to review learned words based on collctive closeness

@@ -41,3 +41,30 @@ extern "C" int *recommend(const char *csr_filename, unsigned int *num_recs,
     *num_recs = closest_words.size();
     return word_ids;
 }
+
+extern "C" int recommend_group(const char *csr_filename, int *source_words, 
+        unsigned int num_source_words, int *word_groups,
+        unsigned int num_groups, unsigned int *group_sizes)
+{
+    string base_filename(csr_filename);
+    string beg_file = base_filename + "_beg_pos.bin";
+    string csr_file = base_filename + "_csr.bin";
+    string weight_file = base_filename + "_weight.bin";
+
+
+    graph<long, long, double, long, long, double> *csr = 
+        new graph <long, long, double, long, long, double>
+        (beg_file.c_str(), csr_file.c_str(), weight_file.c_str());
+
+    std::vector<int> source_word_idxs(source_words, source_words + num_source_words);
+    std::vector<std::unordered_set<int> > groups;
+    
+    for (int i = 0; i < num_groups; i++) {
+        int beg = group_sizes[i];
+        int end = group_sizes[i + 1];
+        groups.push_back(std::unordered_set<int>(word_groups + beg, word_groups + end));
+    }
+
+    return ReviewAndRec::recommend_group(csr, source_word_idxs, groups);
+}
+
