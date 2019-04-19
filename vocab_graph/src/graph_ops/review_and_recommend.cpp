@@ -184,6 +184,11 @@ int collective_closest_group(std::vector<int> &source_words, int n, CSR *csr,
         }
 	}
 
+    // Average sums for size of group
+    for (int i = 0; i < sums.size(); i++) {
+        sums[i] /= groups[i].size();
+    }
+
 	return std::distance(sums.begin(), std::max_element(sums.begin(), sums.end()));
 }
 

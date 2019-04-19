@@ -25,9 +25,7 @@ with open(word_map_fname) as f:
 groups = []
 for i in range(250):
     group = []
-    # Random length groups means that the largest groups will likely be recommended most
-    # Even if they don't have the greatest matches, because their sum will be higher
-    for i in range(random.randint(0, 50)):
+    for i in range(random.randint(5, 50)):
         group.append(words[random.randint(0, len(words) - 1)])
     groups.append(group)
 
