@@ -8,6 +8,8 @@ graph = vocab_graph.VocabGraph(edge_list_fname, word_map_fname)
 
 source_words = ['flame', 'shark']
 res = graph.recommend(source_words, 20)
-print("PYTHON:")
+print('Recommendations:')
 for word in res:
     print(word)
+
+

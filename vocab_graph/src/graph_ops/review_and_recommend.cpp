@@ -146,6 +146,47 @@ WordDist** collective_closest(std::vector<int> &source_words, int n, CSR *csr, b
 	return wd;
 }
 
+int collective_closest_group(std::vector<int> &source_words, int n, CSR *csr, 
+        std::vector<std::unordered_set<int> > &groups) {
+    // Row for each source word, col for each vtx
+    double *dist = (double *)malloc(sizeof(double) * n * csr->vert_count);
+
+    std::vector<double> sums(groups.size(), 0);
+
+    // Fill out dists to all vtxs (dist col) from word (dist row)
+	#pragma omp parallel 
+	{
+		int threadcount = omp_get_num_threads();
+		#pragma omp single
+		{
+			cout << "Using " << threadcount << " threads" << endl;
+		}
+		#pragma omp for schedule(static)
+		for (int i = 0; i < n; i++) {
+			int cols = csr->vert_count;
+			double *shortest_paths = shortest_path_weights(csr, source_words[i]);
+			for (int j = 0; j < cols; j++) {
+				dist[i * cols + j] = shortest_paths[j];
+			}
+		}
+    }
+
+    // Get collective dist of vtx (col) to all source words (row)
+    for (int i = 0; i < csr->vert_count; i++) {
+        // Skip source words
+        if (std::find(source_words.begin(), source_words.end(), i) != source_words.end())
+            continue;
+        double dist_val = get_collective_dist(dist, n, csr->vert_count, i);
+        for (int j = 0; j < groups.size(); j++) {
+            if (groups[j].find(i) != groups[j].end()) {
+                sums[j] += dist_val;
+            }
+        }
+	}
+
+	return std::distance(sums.begin(), std::max_element(sums.begin(), sums.end()));
+}
+
 
 std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, unsigned int num_recs, bool use_rec_pool, std::unordered_set<int> const &rec_pool) {
 	double start_time = omp_get_wtime();
@@ -180,6 +221,13 @@ std::vector<WordDist*> recommend(CSR *csr, std::vector<int> &source_words, unsig
 	cout << "Final Time: " << final_time << endl;
 
 	return related_words;
+}
+
+int recommend_group(CSR *csr, std::vector<int> &source_words, std::vector<std::unordered_set<int> > &groups) {
+    double start_time = omp_get_wtime();
+    int to_review = collective_closest_group(source_words, source_words.size(), csr, groups);
+    cout << "Algo Time: " << omp_get_wtime() - start_time << endl;
+    return to_review;
 }
 
 std::vector<int> review (CSR *csr, std::vector<int> &reviewed, std::vector<int> &learned) {

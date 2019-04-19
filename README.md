@@ -31,6 +31,8 @@ __VocabGraph.recommend__: Recommend words to learn based on given source words, 
 - Provide number of recommendations to make.  
 - Additionally, can provide recomendation pool in form of a list.  If this is given, recommendations will only be made out of this pool.  
 
+__VocabGraph.recommend_group__: Recommend a group of words to learn based on given source words, and given recommendation groups.  Uses collective closest, as mentioned above, but calculates the collective distance of all words in a group and recommends group based on that.  
+
 __VocabGraph.review__: Recommend a reviewing order of given *learned_words* given a list of *reviewed_words*, and update memories of learned words.  
 - Output review recomendation order is determined by collecitve closeness to *reviewed_words*.
 - If *reviewed_words* are not given, then will chose random word from *learned_words* as an initial review word.  

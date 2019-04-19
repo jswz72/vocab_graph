@@ -20,6 +20,7 @@ class VocabGraph:
     def __init__(self, csr_base_filename, word_map_filename):
         self.csr_fname_b = _to_bytes(csr_base_filename)
         self.c_recommend = cdll.LoadLibrary(_REC_FP).recommend
+        self.c_recommend_group = cdll.LoadLibrary(_REC_FP).recommend_group
         self.c_review = cdll.LoadLibrary(_REV_FP).review
         self._get_word_mapping(word_map_filename)
 
@@ -78,6 +79,42 @@ class VocabGraph:
                 rec_pool_arr, len(rec_pool))
 
         return [self.word_map[idx] for idx in ret_ptr[:num_recs_ptr.value]]
+
+
+    def recommend_group(self, source_words, rec_groups):
+        """
+        Recommend group of words, based on their collective closensess to source words.
+
+        rec_groups: List of lists of words of arbitrary lengths
+        """
+        total_group_len = sum([len(g) for g in rec_groups])
+        num_groups = len(rec_groups)
+
+        csr_fname_t = c_char_p
+        source_words_t = POINTER(c_int)
+        num_source_words_t = c_uint
+        groups_t = c_int * total_group_len
+        num_groups_t = c_uint
+        group_sizes_t = c_uint * (num_groups + 1)
+
+
+        self.c_recommend_group.argtypes = [csr_fname_t, source_words_t, num_source_words_t,
+                groups_t, num_groups_t, group_sizes_t]
+
+        self.c_recommend.restype = c_int
+
+        source_words_arr = (c_int * len(source_words))()
+        source_words_arr[:] = [self._get_idx(word) for word in source_words]
+        groups = (c_int * total_group_len)()
+        groups[:] = [self._get_idx(word) for group in rec_groups for word in group]
+        group_sizes = (c_uint * (num_groups + 1))()
+        group_sizes[0] = 0
+        for i in range(1, num_groups + 1):
+            group_sizes[i] = group_sizes[i - 1] + len(rec_groups[i - 1])
+
+        idx = self.c_recommend_group(self.csr_fname_b, source_words_arr, len(source_words),
+                groups, len(rec_groups), group_sizes)
+        return rec_groups[idx]
 
 
     def review(self, learned_words, reviewed_words=[]):
