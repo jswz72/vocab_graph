@@ -68,3 +68,37 @@ extern "C" int recommend_group(const char *csr_filename, int *source_words,
     return ReviewAndRec::recommend_group(csr, source_word_idxs, groups);
 }
 
+int leven_dist(const char *a, const char *b) {
+    int *dists = (int *)malloc(sizeof(int) * (strlen(a) + 1) * (strlen(b) + 1));
+    int cols = strlen(a) + 1;
+    for (int i = 0; i <= strlen(b); i++) {
+        for (int j = 0; j < strlen(a); j++) {
+            if (i == 0)
+                dists[i * cols + j] = j;
+            else if (j == 0)
+                dists[i * cols + j] = i;
+            else
+                dists[i * cols + j] = 0;
+        }
+    }
+
+    for (int j = 1; j <= strlen(b); j++) {
+        for (int i = 1; i <= strlen(a); i++) {
+            int indicator = a[i - 1] != b[j - 1];
+            dists[j * cols + i] = std::min({dists[j * cols + i - 1] + 1,
+                    dists[(j - 1) * cols + i] + 1,
+                    dists[(j - 1) * cols + i - 1] + indicator});
+        }
+    }
+
+    return dists[strlen(b) * cols + strlen(a)];
+}
+
+extern "C" int *recommend_spelling(const char **source_words, int num_source_words, 
+        const char **all_words, int num_all_words) {
+    cout << leven_dist(source_words[0], source_words[1]) << endl;
+    return 0;
+}
+
+
+

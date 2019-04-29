@@ -21,6 +21,7 @@ class VocabGraph:
         self.csr_fname_b = _to_bytes(csr_base_filename)
         self.c_recommend = cdll.LoadLibrary(_REC_FP).recommend
         self.c_recommend_group = cdll.LoadLibrary(_REC_FP).recommend_group
+        self.c_recommend_spelling = cdll.LoadLibrary(_REC_FP).recommend_spelling
         self.c_review = cdll.LoadLibrary(_REV_FP).review
         self._get_word_mapping(word_map_filename)
 
@@ -160,6 +161,22 @@ class VocabGraph:
 
         return [WordMem(self.word_map[wm.word_id], wm.last_learned, wm.strength, wm.memory)
             for wm in ret_ptr[:len(learned_words)]]
+
+
+    def recommend_spelling(self, source_words):
+        source_words_t = c_char_p * len(source_words)
+        word_map_t = c_char_p * len(self.word_map)
+
+        self.c_recommend_spelling.argtypes = [source_words_t, word_map_t]
+
+        source_words_arr = (c_char_p * len(source_words))()
+        source_words_arr[:] = [_to_bytes(word) for word in source_words]
+        word_map_arr = (c_char_p * len(self.word_map))()
+        word_map_arr[:] = self.word_map_b
+
+        self.c_recommend_spelling(source_words_arr, word_map_arr)
+
+
 
 
 class CWordMem(Structure):
