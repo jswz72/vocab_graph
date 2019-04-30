@@ -1,6 +1,7 @@
 import vocab_graph
 import sys
 
+# Test impl of levenshtein dist
 def leven_dist(a, b):
     dists = [[0 for _ in range(len(a) + 1)] for _ in range(len(b) + 1)]
 
@@ -29,7 +30,9 @@ word_map_fname = './data/word-order.txt'
 graph = vocab_graph.VocabGraph(edge_list_fname, word_map_fname)
 
 #print('Dist is {}'.format(leven_dist(word1, word2)))
-graph.recommend_spelling([word1, word2])
+recommendations = graph.recommend_spelling([word1, word2], 3)
+for word in recommendations:
+    print(word)
 
 
 

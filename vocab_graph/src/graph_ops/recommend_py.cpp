@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <unordered_set>
 #include <fstream>
@@ -68,36 +69,69 @@ extern "C" int recommend_group(const char *csr_filename, int *source_words,
     return ReviewAndRec::recommend_group(csr, source_word_idxs, groups);
 }
 
+// Return Levenshtein edit distance between two words
 int leven_dist(const char *a, const char *b) {
     int *dists = (int *)malloc(sizeof(int) * (strlen(a) + 1) * (strlen(b) + 1));
     int cols = strlen(a) + 1;
-    for (int i = 0; i <= strlen(b); i++) {
-        for (int j = 0; j < strlen(a); j++) {
-            if (i == 0)
-                dists[i * cols + j] = j;
-            else if (j == 0)
-                dists[i * cols + j] = i;
-            else
-                dists[i * cols + j] = 0;
-        }
-    }
+    for (int i = 0; i <= strlen(b); i++)
+        for (int j = 0; j <= strlen(a); j++)
+            dists[i * cols + j] = 0;
 
-    for (int j = 1; j <= strlen(b); j++) {
-        for (int i = 1; i <= strlen(a); i++) {
-            int indicator = a[i - 1] != b[j - 1];
-            dists[j * cols + i] = std::min({dists[j * cols + i - 1] + 1,
-                    dists[(j - 1) * cols + i] + 1,
-                    dists[(j - 1) * cols + i - 1] + indicator});
+    for (int i = 0; i <= strlen(a); i++)
+        dists[i] = i;
+
+    for (int i = 0; i <= strlen(b); i++)
+        dists[i * cols] = i;
+
+    for (int i = 1; i <= strlen(b); i++) {
+        for (int j = 1; j <= strlen(a); j++) {
+            int indicator = a[j - 1] != b[i - 1];
+            dists[i * cols + j] = std::min({dists[i * cols + j - 1] + 1,
+                    dists[(i - 1) * cols + j] + 1,
+                    dists[(i - 1) * cols + j - 1] + indicator});
         }
     }
 
     return dists[strlen(b) * cols + strlen(a)];
 }
 
-extern "C" int *recommend_spelling(const char **source_words, int num_source_words, 
-        const char **all_words, int num_all_words) {
-    cout << leven_dist(source_words[0], source_words[1]) << endl;
-    return 0;
+struct EditDist {
+    const char *word;
+    int edit_dist;
+    EditDist(const char *word): word(word) {};
+};
+
+extern "C" const char **recommend_spelling(const char **source_words, int num_source_words, 
+        const char **all_words, int num_all_words, int num_recs) 
+{
+    EditDist *dists = (EditDist *)malloc(sizeof(EditDist) * num_all_words);
+    for (int i = 0; i < num_all_words; i++) {
+        dists[i] = EditDist(all_words[i]);
+        dists[i].edit_dist = 0;
+    }
+    for (int i = 0; i < num_source_words; i++) {
+        #pragma omp for
+        for (int j = 0; j < num_all_words; j++) {
+           int dist = leven_dist(source_words[i], all_words[j]);
+            dists[j].edit_dist += dist;
+        }
+    }
+    std::sort(dists, dists + num_all_words, [](EditDist a, EditDist b) -> bool
+    {
+        return a.edit_dist < b.edit_dist;
+    });
+    std::unordered_set<std::string> source_words_set;
+    for (int i = 0; i < num_source_words; i++) {
+        source_words_set.insert(std::string(source_words[i]));
+    }
+    const char **ret_arr = (const char **)malloc(sizeof(const char *) * num_recs);
+    int added = 0;
+    for (int i = 0; added < num_recs && i < num_all_words; i++) {
+        if (source_words_set.find(std::string(dists[i].word)) == source_words_set.end()) {
+            ret_arr[added++] = dists[i].word;
+        }
+    }
+    return ret_arr;
 }
 
 

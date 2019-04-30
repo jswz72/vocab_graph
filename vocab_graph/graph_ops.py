@@ -163,20 +163,27 @@ class VocabGraph:
             for wm in ret_ptr[:len(learned_words)]]
 
 
-    def recommend_spelling(self, source_words):
+    def recommend_spelling(self, source_words, num_recs):
         source_words_t = c_char_p * len(source_words)
+        num_source_words_t = c_uint
         word_map_t = c_char_p * len(self.word_map)
+        num_word_map_t = c_uint
+        num_recs_t = c_uint
 
-        self.c_recommend_spelling.argtypes = [source_words_t, word_map_t]
+        self.c_recommend_spelling.argtypes = [source_words_t, num_source_words_t,
+                word_map_t, num_word_map_t, num_recs_t]
+
+        self.c_recommend_spelling.restype = POINTER(c_char_p)
 
         source_words_arr = (c_char_p * len(source_words))()
         source_words_arr[:] = [_to_bytes(word) for word in source_words]
         word_map_arr = (c_char_p * len(self.word_map))()
         word_map_arr[:] = self.word_map_b
 
-        self.c_recommend_spelling(source_words_arr, word_map_arr)
+        ret_ptr = self.c_recommend_spelling(source_words_arr, len(source_words),
+                word_map_arr, len(self.word_map), num_recs)
 
-
+        return [word.decode('utf-8') for word in ret_ptr[:num_recs]]
 
 
 class CWordMem(Structure):
