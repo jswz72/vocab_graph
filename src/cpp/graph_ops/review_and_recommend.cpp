@@ -63,14 +63,14 @@ double *shortest_path_weights(CSR *csr, int source)
 
     distances[source] = 0;
     int cur = source;
+    // Update distances
+    double *local_min_dists;
+    int *local_min_idxs;
     for (int count = 0; count < verticies - 1; count++)
     {
         //int cur = min_dist(distances, path, verticies);
         path[cur] = true;
 
-        // Update distances
-        double *local_min_dists;
-        int *local_min_idxs;
 #pragma omp parallel
         {
             int threadcount = omp_get_num_threads();
@@ -102,7 +102,7 @@ double *shortest_path_weights(CSR *csr, int source)
 #pragma omp single
             {
                 double min = local_min_dists[0];
-                int min_idx;
+                int min_idx = 0;
                 for (int i = 1; i < threadcount; i++) {
                     if (local_min_dists[i] < min) {
                         min = local_min_dists[i];
