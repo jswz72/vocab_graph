@@ -164,6 +164,12 @@ class VocabGraph:
 
 
     def recommend_spelling(self, source_words, num_recs):
+        '''
+        Recommend words based on spellling similarity, not semantic meaning
+
+        num_recs recommendations are returned based on their collective similarity to
+        the spelling of source_words, using Levenshtein distance
+        '''
         source_words_t = c_char_p * len(source_words)
         num_source_words_t = c_uint
         word_map_t = c_char_p * len(self.word_map)

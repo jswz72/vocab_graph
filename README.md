@@ -27,18 +27,21 @@ __make_graph__: Function provided that internally calls the two above functions.
 __VocabGraph__ class: Holds vocab graph constructed above, and has methods for operations on the graph.
 - Initialize with the filename of the edgelist created above (internally it will use the CSR files created by *tuple_text_to_bin*), and the filename of the word mapping file (produced by *get_edge_list*).  
 
-__VocabGraph.recommend__: Recommend words to learn based on given source words, calculated via collective closeness to source words.  
+__VocabGraph.recommend__: Recommend words to learn based on semantic similarity to given source words, calculated via collective closeness to source words.  
 - Provide number of recommendations to make.  
 - Additionally, can provide recomendation pool in form of a list.  If this is given, recommendations will only be made out of this pool.  
 
-__VocabGraph.recommend_group__: Recommend a group of words to learn based on given source words, and given recommendation groups.  Uses collective closest, as mentioned above, but calculates the collective distance of all words in a group and recommends group based on that.  
+__VocabGraph.recommend_group__: Recommend a group of words to learn based on semantic similarity to given source words, and given recommendation groups.  Uses collective closest, as mentioned above, but calculates the collective distance of all words in a group and recommends group based on that.  
 
 __VocabGraph.review__: Recommend a reviewing order of given *learned_words* given a list of *reviewed_words*, and update memories of learned words.  
 - Output review recomendation order is determined by collecitve closeness to *reviewed_words*.
 - If *reviewed_words* are not given, then will chose random word from *learned_words* as an initial review word.  
 - Input *learned_words* must be in form of *WordMem* object, with *last_learned* and *strenght* fields populated. 
 - Will calculate the memory of each word from the given WordMem parameters, and the returned recommended review list will contain updated WordMems.
-- This can be called cyclically, with the caller updating the *reviewed_words* and WordMem parameters between calls to show the reiviewing of new words, and the resulting memories. 
+- This can be called cyclically, with the caller updating the *reviewed_words* and WordMem parameters between calls to show the reiviewing of new words, and the resulting memories.   
+
+__VocabGraph.recommend_spelling__: Recommend a group of words to learn based on syntacic similarity between words, using Levenshtein distance to get the number of edits between words.  
+
 
 __WordMem__ class:  Class to aggregate memory/forgetting parameters for reviewing.  
 - *word* is the actual word string.  
