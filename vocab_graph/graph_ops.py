@@ -1,4 +1,5 @@
 from ctypes import cdll, POINTER, c_char_p, c_int, c_double, c_uint, byref, Structure
+import fuzzy
 import os
 
 _REC_LIB = 'recommend.so'
@@ -165,10 +166,12 @@ class VocabGraph:
 
     def recommend_spelling(self, source_words, num_recs):
         '''
-        Recommend words based on spellling similarity, not semantic meaning
+        Recommend words based on spellling similarity, 
+        not semantic meaning
 
-        num_recs recommendations are returned based on their collective similarity to
-        the spelling of source_words, using Levenshtein distance
+        num_recs recommendations are returned based on their collective 
+        similarity to the spelling of source_words, 
+        using Levenshtein distance
         '''
         source_words_t = c_char_p * len(source_words)
         num_source_words_t = c_uint
@@ -176,8 +179,9 @@ class VocabGraph:
         num_word_map_t = c_uint
         num_recs_t = c_uint
 
-        self.c_recommend_spelling.argtypes = [source_words_t, num_source_words_t,
-                word_map_t, num_word_map_t, num_recs_t]
+        self.c_recommend_spelling.argtypes = [source_words_t, 
+                num_source_words_t, word_map_t, num_word_map_t, 
+                num_recs_t]
 
         self.c_recommend_spelling.restype = POINTER(c_char_p)
 
@@ -190,6 +194,36 @@ class VocabGraph:
                 word_map_arr, len(self.word_map), num_recs)
 
         return [word.decode('utf-8') for word in ret_ptr[:num_recs]]
+
+
+    def recommend_phonetic(self, source_words, num_recs):
+        dmetaph = fuzzy.DMetaphone()
+        word_phonetics = [dmetaph(word) for word in self.word_map]
+        flat_word_phonetics = [phonetic for phonetics in 
+                word_phonetics for phonetic in phonetics]
+        # Account for 1-2 phonetic encodings for each word
+
+        source_words_t = c_char_p * len(source_words)
+        num_source_words_t = c_uint
+        prefix_sum_t = c_uint * (len(word_phonetics) + 1)
+        prefix_sum_size_t = c_uint
+        word_phonetics_t = c_char_p * len(flat_word_phonetics)
+        num_recs_t = c_uint
+
+        self.c_recommend_phonetic.argtypes = [source_words_t,
+                num_source_words_t, prefix_sum_t, prefix_sum_size_t,
+                word_phonetics_t, num_recs_t]
+
+        self.c_recommend_phonetic.restype = POINTER(c_int)
+
+        source_words_arr = (c_char_p * len(source_words))()
+        source_words_arr[:] = [_to_bytes(word) for word in 
+                source_words]
+        prefix_sum = # TODO
+        word_phonetics = (c_char_p * len(flat_word_phonetics)
+        
+        
+
 
 
 class CWordMem(Structure):
