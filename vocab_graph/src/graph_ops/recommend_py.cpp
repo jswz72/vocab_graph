@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <fstream>
 #include <cstdlib>
+#include <climits>
 #include "review_and_recommend.h"
 #include "utils.h"
 
@@ -132,6 +133,52 @@ extern "C" const char **recommend_spelling(const char **source_words, int num_so
         }
     }
     return ret_arr;
+}
+
+struct PHEditDist {
+    int id;
+    int edit_dist;
+    PHEditDist(int id): id(id), edit_dist(0) {};
+};
+
+extern "C" int *recommend_phonetic(const char **source_phonetics,
+		unsigned int *source_sums, unsigned int source_sums_size,
+		const char **word_phonetics, unsigned int *word_sums,
+		unsigned int word_sums_size)
+{
+	int num_words = word_sums_size - 1;
+	int num_source_words = source_sums_size - 1;
+	PHEditDist *dists = (PHEditDist *)malloc(sizeof(PHEditDist) * num_words);
+
+	for (int i = 0; i < num_words; i++)
+        dists[i] = PHEditDist(i);
+
+	for (int i = 0; i < num_source_words; i++) {
+		for (int j = 0; j < num_words; j++) {
+			int min_dist = INT_MAX;
+			for (int sub_i = source_sums[i]; sub_i < source_sums[i + 1];
+				   	sub_i++) {
+				for (int sub_j = word_sums[j]; sub_j < word_sums[j + 1];
+						sub_j++) {
+					int dist = leven_dist(source_phonetics[sub_i],
+							word_phonetics[sub_j]);
+					if (dist < min_dist)
+						min_dist = dist;
+				}
+			}
+			dists[j].edit_dist += min_dist;
+		}
+	}
+
+	std::sort(dists, dists + num_words, [](PHEditDist a, PHEditDist b) -> bool
+    {
+        return a.edit_dist < b.edit_dist;
+    });
+	int *ret_arr = (int *)malloc(sizeof(int) * (num_words));
+	for (int i = 0; i < num_words; i++) {
+		ret_arr[i] = dists[i].id;
+	}
+	return ret_arr;
 }
 
 

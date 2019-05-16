@@ -9,7 +9,9 @@ edge_list_fname = './data/edge-list.txt'
 word_map_fname = './data/word-order.txt'
 
 dmetaphone = fuzzy.DMetaphone()
+graph = vocab_graph.VocabGraph(edge_list_fname, word_map_fname)
 
-for word in [word1, word2]:
-    print(dmetaphone(word))
+recommendations = graph.recommend_phonetic([word1, word2], 3)
+for word in recommendations:
+    print(word)
 
