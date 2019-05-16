@@ -167,11 +167,11 @@ class VocabGraph:
 
     def recommend_spelling(self, source_words, num_recs):
         '''
-        Recommend words based on spellling similarity, 
+        Recommend words based on spellling similarity,
         not semantic meaning
 
-        num_recs recommendations are returned based on their collective 
-        similarity to the spelling of source_words, 
+        num_recs recommendations are returned based on their collective
+        similarity to the spelling of source_words,
         using Levenshtein distance
         '''
         source_words_t = c_char_p * len(source_words)
@@ -180,8 +180,8 @@ class VocabGraph:
         num_word_map_t = c_uint
         num_recs_t = c_uint
 
-        self.c_recommend_spelling.argtypes = [source_words_t, 
-                num_source_words_t, word_map_t, num_word_map_t, 
+        self.c_recommend_spelling.argtypes = [source_words_t,
+                num_source_words_t, word_map_t, num_word_map_t,
                 num_recs_t]
 
         self.c_recommend_spelling.restype = POINTER(c_char_p)
@@ -201,11 +201,13 @@ class VocabGraph:
         dmetaph = fuzzy.DMetaphone()
         word_phonetics = [dmetaph(word) for word in self.word_map]
         # Account for 1-2 phonetic encodings for each word
-        flat_word_phonetics = [ph for phonetics in 
+        flat_word_phonetics = [ph for phonetics in
                 word_phonetics for ph in phonetics if ph]
         source_phonetics = [dmetaph(word) for word in source_words]
-        flat_source_phonetics = [ph for phonetics in 
+        flat_source_phonetics = [ph for phonetics in
                 source_phonetics for ph in phonetics if ph]
+
+        print(word_phonetics[4295])
 
         source_phonetics_t = c_char_p * len(flat_source_phonetics)
         source_sums_t = c_uint * (len(source_words) + 1)
@@ -221,7 +223,7 @@ class VocabGraph:
         self.c_recommend_phonetic.restype = POINTER(c_int)
 
         source_phonetics_arr = (c_char_p * len(flat_source_phonetics))()
-        source_phonetics_arr[:] = [ph for ph in 
+        source_phonetics_arr[:] = [ph for ph in
                 flat_source_phonetics]
         source_sums_arr = (c_uint * (len(source_words) + 1))()
         source_sums_arr[0] = 0
@@ -241,6 +243,7 @@ class VocabGraph:
 
         ret_arr = []
         i = 0
+        print(ret_ptr[:3])
         while len(ret_arr) < num_recs and i < len(self.word_map):
             rec_word = self.word_map[ret_ptr[i]]
             if rec_word not in source_words:

@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <climits>
+#include <omp.h>
 #include "review_and_recommend.h"
 #include "utils.h"
 
@@ -111,7 +112,7 @@ extern "C" const char **recommend_spelling(const char **source_words, int num_so
         dists[i].edit_dist = 0;
     }
     for (int i = 0; i < num_source_words; i++) {
-        #pragma omp for
+        #pragma omp parallel for
         for (int j = 0; j < num_all_words; j++) {
            int dist = leven_dist(source_words[i], all_words[j]);
             dists[j].edit_dist += dist;
@@ -154,19 +155,23 @@ extern "C" int *recommend_phonetic(const char **source_phonetics,
         dists[i] = PHEditDist(i);
 
 	for (int i = 0; i < num_source_words; i++) {
+        #pragma omp parallel for
 		for (int j = 0; j < num_words; j++) {
-			int min_dist = INT_MAX;
+			int min_dist = INT_MAX / num_source_words;
 			for (int sub_i = source_sums[i]; sub_i < source_sums[i + 1];
 				   	sub_i++) {
 				for (int sub_j = word_sums[j]; sub_j < word_sums[j + 1];
 						sub_j++) {
 					int dist = leven_dist(source_phonetics[sub_i],
 							word_phonetics[sub_j]);
+                    //printf("%s, %s, dist: %d, tid: %d\n", source_phonetics[sub_i], word_phonetics[sub_j], dist, omp_get_thread_num());
 					if (dist < min_dist)
 						min_dist = dist;
 				}
 			}
 			dists[j].edit_dist += min_dist;
+            if (dists[j].edit_dist < 0)
+                printf("DEBUG: %d, %d\n", dists[j].edit_dist, min_dist);
 		}
 	}
 
@@ -175,6 +180,7 @@ extern "C" int *recommend_phonetic(const char **source_phonetics,
         return a.edit_dist < b.edit_dist;
     });
 	int *ret_arr = (int *)malloc(sizeof(int) * (num_words));
+    printf("First: %d\n", dists[0].edit_dist);
 	for (int i = 0; i < num_words; i++) {
 		ret_arr[i] = dists[i].id;
 	}
