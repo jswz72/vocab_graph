@@ -164,14 +164,11 @@ extern "C" int *recommend_phonetic(const char **source_phonetics,
 						sub_j++) {
 					int dist = leven_dist(source_phonetics[sub_i],
 							word_phonetics[sub_j]);
-                    //printf("%s, %s, dist: %d, tid: %d\n", source_phonetics[sub_i], word_phonetics[sub_j], dist, omp_get_thread_num());
 					if (dist < min_dist)
 						min_dist = dist;
 				}
 			}
 			dists[j].edit_dist += min_dist;
-            if (dists[j].edit_dist < 0)
-                printf("DEBUG: %d, %d\n", dists[j].edit_dist, min_dist);
 		}
 	}
 
@@ -180,10 +177,8 @@ extern "C" int *recommend_phonetic(const char **source_phonetics,
         return a.edit_dist < b.edit_dist;
     });
 	int *ret_arr = (int *)malloc(sizeof(int) * (num_words));
-    printf("First: %d\n", dists[0].edit_dist);
-	for (int i = 0; i < num_words; i++) {
+	for (int i = 0; i < num_words; i++)
 		ret_arr[i] = dists[i].id;
-	}
 	return ret_arr;
 }
 

@@ -243,7 +243,6 @@ class VocabGraph:
 
         ret_arr = []
         i = 0
-        print(ret_ptr[:3])
         while len(ret_arr) < num_recs and i < len(self.word_map):
             rec_word = self.word_map[ret_ptr[i]]
             if rec_word not in source_words:
