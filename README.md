@@ -40,7 +40,10 @@ __VocabGraph.review__: Recommend a reviewing order of given *learned_words* give
 - Will calculate the memory of each word from the given WordMem parameters, and the returned recommended review list will contain updated WordMems.
 - This can be called cyclically, with the caller updating the *reviewed_words* and WordMem parameters between calls to show the reiviewing of new words, and the resulting memories.   
 
-__VocabGraph.recommend_spelling__: Recommend a group of words to learn based on syntacic similarity between words, using Levenshtein distance to get the number of edits between words.  
+__VocabGraph.recommend_spelling__: Recommend a group of words to learn based on syntacic similarity between words, using Levenshtein distance to get the number of edits between words.   
+
+__VocabGraph.recommend_phonetic__: Recommend a group of words to learn based on phonetic similarity between words,
+this uses [Double Metaphone Encoding](https://en.wikipedia.org/wiki/Metaphone#Double_Metaphone), via the [Fuzzy](https://pypi.org/project/Fuzzy/) Python package, to translate words into a phonetic encoding, and then uses minimum Levenshtein distance between encodings to get the number of edits between words.   
 
 
 __WordMem__ class:  Class to aggregate memory/forgetting parameters for reviewing.  
